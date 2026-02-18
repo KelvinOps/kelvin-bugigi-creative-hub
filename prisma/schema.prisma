@@ -1,0 +1,142 @@
+// prisma/schema.prisma
+// Prisma 7.x — PostgreSQL via Supabase
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── USERS ───────────────────────────────────
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  role      Role     @default(VIEWER)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  @@map("users")
+}
+
+enum Role {
+  ADMIN
+  VIEWER
+}
+
+// ─── PROJECTS ────────────────────────────────
+model Project {
+  id           String      @id @default(uuid())
+  title        String
+  category     Category
+  description  String?     @db.Text
+  tags         String[]    @default([])
+  displayOrder Int         @default(0) @map("display_order")
+  featured     Boolean     @default(false)
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
+
+  images       ProjectImage[]
+  links        ProjectLink[]
+  softwareMeta SoftwareMeta?
+  artMeta      ArtMeta?
+  designMeta   DesignMeta?
+
+  @@map("projects")
+}
+
+enum Category {
+  WEB_DEV  @map("Web Dev")
+  DESIGN   @map("Design")
+  FINE_ART @map("Fine Art")
+}
+
+// ─── PROJECT IMAGES ───────────────────────────
+model ProjectImage {
+  id           String   @id @default(uuid())
+  projectId    String   @map("project_id")
+  imageUrl     String   @map("image_url")
+  altText      String?  @map("alt_text")
+  displayOrder Int      @default(0) @map("display_order")
+  createdAt    DateTime @default(now()) @map("created_at")
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  @@map("project_images")
+}
+
+// ─── PROJECT LINKS ────────────────────────────
+model ProjectLink {
+  id           String   @id @default(uuid())
+  projectId    String   @map("project_id")
+  label        String
+  url          String
+  linkType     LinkType @default(OTHER) @map("link_type")
+  displayOrder Int      @default(0) @map("display_order")
+  createdAt    DateTime @default(now()) @map("created_at")
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  @@map("project_links")
+}
+
+enum LinkType {
+  LIVE  @map("live")
+  REPO  @map("repo")
+  SHOP  @map("shop")
+  DEMO  @map("demo")
+  OTHER @map("other")
+}
+
+// ─── SOFTWARE DEV META ────────────────────────
+model SoftwareMeta {
+  id              String   @id @default(uuid())
+  projectId       String   @unique @map("project_id")
+  techStack       String[] @default([]) @map("tech_stack")
+  liveUrl         String?  @map("live_url")
+  repoUrl         String?  @map("repo_url")
+  lighthouseScore Int?     @map("lighthouse_score")
+  pageLoadMs      Int?     @map("page_load_ms")
+  monthlyVisitors Int?     @map("monthly_visitors")
+  uptime          Float?
+  analyticsNote   String?  @db.Text @map("analytics_note")
+  createdAt       DateTime @default(now()) @map("created_at")
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  @@map("software_meta")
+}
+
+// ─── FINE ART META ────────────────────────────
+model ArtMeta {
+  id          String    @id @default(uuid())
+  projectId   String    @unique @map("project_id")
+  medium      ArtMedium
+  dimensions  String?
+  year        Int?
+  isAvailable Boolean   @default(true) @map("is_available")
+  price       Float?
+  shopUrl     String?   @map("shop_url")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  @@map("art_meta")
+}
+
+enum ArtMedium {
+  PENCIL
+  GRAPHITE
+  BALLPOINT
+  OIL
+  ACRYLIC
+  WATERCOLOR
+  MIXED_MEDIA @map("Mixed Media")
+  OTHER
+}
+
+// ─── GRAPHIC DESIGN META ─────────────────────
+model DesignMeta {
+  id         String   @id @default(uuid())
+  projectId  String   @unique @map("project_id")
+  software   String[] @default([])
+  clientName String?  @map("client_name")
+  year       Int?
+  behanceUrl String?  @map("behance_url")
+  createdAt  DateTime @default(now()) @map("created_at")
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  @@map("design_meta")
+}
