@@ -1,7 +1,7 @@
 // src/components/Navbar.tsx
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Menu, X, LogIn, LogOut, Settings } from "lucide-react";
+import { Menu, X, LogIn, LogOut, Settings, Shield } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -34,6 +34,103 @@ const Navbar = () => {
     navigate("/");
   };
 
+  // Render auth controls — always shown, never hidden behind loading spinner
+  const renderAuthDesktop = () => {
+    if (loading) {
+      // Skeleton placeholder so layout doesn't shift
+      return (
+        <div className="w-20 h-8 rounded-full bg-border/40 animate-pulse" />
+      );
+    }
+
+    if (user && isAdmin) {
+      return (
+        <>
+          <Link
+            to="/admin"
+            className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full font-mono text-xs uppercase tracking-wider transition-all ${
+              location.pathname === "/admin"
+                ? "bg-primary/15 text-primary border border-primary/30"
+                : "text-muted-foreground hover:text-foreground hover:bg-secondary border border-transparent"
+            }`}
+          >
+            <Shield size={12} /> Admin
+          </Link>
+          <button
+            onClick={handleSignOut}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full border border-border text-muted-foreground font-mono text-xs uppercase tracking-wider hover:text-foreground hover:bg-secondary transition-all"
+          >
+            <LogOut size={12} /> Sign Out
+          </button>
+        </>
+      );
+    }
+
+    if (user && !isAdmin) {
+      return (
+        <button
+          onClick={handleSignOut}
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full border border-border text-muted-foreground font-mono text-xs uppercase tracking-wider hover:text-foreground hover:bg-secondary transition-all"
+        >
+          <LogOut size={12} /> Sign Out
+        </button>
+      );
+    }
+
+    // Not logged in — solid amber button, always visible
+    return (
+      <Link
+        to="/auth"
+        className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full bg-gradient-amber font-display font-semibold text-sm text-primary-foreground hover:opacity-90 transition-opacity shadow-md shadow-amber-500/20"
+      >
+        <LogIn size={14} /> Login
+      </Link>
+    );
+  };
+
+  const renderAuthMobile = () => {
+    if (loading) return null;
+
+    if (user && isAdmin) {
+      return (
+        <>
+          <Link
+            to="/admin"
+            className="flex items-center gap-2 font-mono text-sm uppercase text-primary"
+          >
+            <Shield size={14} /> Admin Dashboard
+          </Link>
+          <button
+            onClick={handleSignOut}
+            className="flex items-center gap-2 font-mono text-sm uppercase text-muted-foreground hover:text-foreground"
+          >
+            <LogOut size={14} /> Sign Out
+          </button>
+        </>
+      );
+    }
+
+    if (user && !isAdmin) {
+      return (
+        <button
+          onClick={handleSignOut}
+          className="flex items-center gap-2 font-mono text-sm uppercase text-muted-foreground hover:text-foreground"
+        >
+          <LogOut size={14} /> Sign Out
+        </button>
+      );
+    }
+
+    return (
+      <Link
+        to="/auth"
+        className="flex items-center gap-2 font-mono text-sm uppercase text-primary"
+      >
+        <LogIn size={14} /> Admin Login
+      </Link>
+    );
+  };
+
   return (
     <motion.nav
       initial={{ y: -80 }}
@@ -44,6 +141,7 @@ const Navbar = () => {
       }`}
     >
       <div className="container mx-auto px-6 py-4 flex items-center justify-between">
+
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2 group">
           <div className="w-10 h-10 rounded-lg bg-gradient-amber flex items-center justify-center font-display font-bold text-primary-foreground text-lg">
@@ -71,41 +169,9 @@ const Navbar = () => {
           ))}
         </div>
 
-        {/* Desktop right-side buttons */}
+        {/* Desktop right-side controls */}
         <div className="hidden md:flex items-center gap-2">
-          {!loading && (
-            <>
-              {user ? (
-                <>
-                  {isAdmin && (
-                    <Link
-                      to="/admin"
-                      className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full font-mono text-xs uppercase tracking-wider transition-all ${
-                        location.pathname === "/admin"
-                          ? "bg-primary/10 text-primary"
-                          : "text-muted-foreground hover:text-foreground hover:bg-secondary"
-                      }`}
-                    >
-                      <Settings size={12} /> Admin
-                    </Link>
-                  )}
-                  <button
-                    onClick={handleSignOut}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full border border-border text-muted-foreground font-mono text-xs uppercase tracking-wider hover:text-foreground hover:bg-secondary transition-all"
-                  >
-                    <LogOut size={12} /> Sign Out
-                  </button>
-                </>
-              ) : (
-                <Link
-                  to="/auth"
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full border border-border text-muted-foreground font-mono text-xs uppercase tracking-wider hover:text-foreground hover:bg-secondary transition-all"
-                >
-                  <LogIn size={12} /> Login
-                </Link>
-              )}
-            </>
-          )}
+          {renderAuthDesktop()}
           <Link
             to="/contact"
             className="inline-flex px-5 py-2.5 rounded-full bg-gradient-amber font-display font-semibold text-sm text-primary-foreground hover:opacity-90 transition-opacity"
@@ -115,7 +181,11 @@ const Navbar = () => {
         </div>
 
         {/* Mobile hamburger */}
-        <button onClick={() => setMobileOpen(!mobileOpen)} className="md:hidden text-foreground p-2">
+        <button
+          onClick={() => setMobileOpen(!mobileOpen)}
+          className="md:hidden text-foreground p-2"
+          aria-label="Toggle menu"
+        >
           {mobileOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
       </div>
@@ -150,36 +220,10 @@ const Navbar = () => {
                 </motion.div>
               ))}
 
-              {/* Mobile auth buttons */}
-              {!loading && (
-                <div className="flex flex-col gap-3 mt-4 border-t border-border pt-6">
-                  {user ? (
-                    <>
-                      {isAdmin && (
-                        <Link
-                          to="/admin"
-                          className="flex items-center gap-2 font-mono text-sm uppercase text-primary"
-                        >
-                          <Settings size={14} /> Admin Dashboard
-                        </Link>
-                      )}
-                      <button
-                        onClick={handleSignOut}
-                        className="flex items-center gap-2 font-mono text-sm uppercase text-muted-foreground hover:text-foreground"
-                      >
-                        <LogOut size={14} /> Sign Out
-                      </button>
-                    </>
-                  ) : (
-                    <Link
-                      to="/auth"
-                      className="flex items-center gap-2 font-mono text-sm uppercase text-muted-foreground hover:text-foreground"
-                    >
-                      <LogIn size={14} /> Login
-                    </Link>
-                  )}
-                </div>
-              )}
+              {/* Mobile auth */}
+              <div className="flex flex-col gap-3 mt-4 border-t border-border pt-6">
+                {renderAuthMobile()}
+              </div>
 
               <Link
                 to="/contact"

@@ -46,10 +46,12 @@ model Project {
   @@map("projects")
 }
 
+// FIX: Added PHOTOGRAPHY to the enum
 enum Category {
-  WEB_DEV  @map("Web Dev")
-  DESIGN   @map("Design")
-  FINE_ART @map("Fine Art")
+  WEB_DEV     @map("Web Dev")
+  DESIGN      @map("Design")
+  FINE_ART    @map("Fine Art")
+  PHOTOGRAPHY @map("Photography")
 }
 
 // ─── PROJECT IMAGES ───────────────────────────
@@ -128,7 +130,7 @@ enum ArtMedium {
   OTHER
 }
 
-// ─── GRAPHIC DESIGN META ─────────────────────
+// ─── GRAPHIC DESIGN / PHOTOGRAPHY META ───────
 model DesignMeta {
   id         String   @id @default(uuid())
   projectId  String   @unique @map("project_id")

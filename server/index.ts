@@ -1,6 +1,8 @@
-// server/index.ts
+// server/index.ts — security-hardened with role verification, helmet, rate limiting
 import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 import { PrismaClient, Category as PrismaCategory, LinkType as PrismaLinkType } from "../src/generated/prisma";
 import { PrismaPg } from "@prisma/adapter-pg";
 import pg from "pg";
@@ -10,182 +12,118 @@ import { ProjectFormData, Category } from "../src/types/project";
 
 dotenv.config();
 
-// Extend Express Request type to include userId
-interface AuthenticatedRequest extends Request {
-  userId?: string;
-}
-
-// Prisma requires a driver adapter — we use pg
+// ── DB ────────────────────────────────────────────────────────────────────────
 const connectionString = process.env.DATABASE_URL;
-if (!connectionString) throw new Error("DATABASE_URL is not set in .env");
+if (!connectionString) throw new Error("DATABASE_URL is not set");
 const pool = new pg.Pool({ connectionString });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
-// Supabase admin for verifying JWTs
+// ── Supabase service-role client ──────────────────────────────────────────────
 const supabaseUrl = process.env.VITE_SUPABASE_URL;
 const supabaseServiceRole = process.env.SUPABASE_SERVICE_ROLE_KEY;
+if (!supabaseUrl) throw new Error("VITE_SUPABASE_URL is not set");
+if (!supabaseServiceRole) throw new Error("SUPABASE_SERVICE_ROLE_KEY is not set");
+const supabase = createClient(supabaseUrl, supabaseServiceRole);
 
-if (!supabaseUrl) throw new Error("VITE_SUPABASE_URL is not set in .env");
-if (!supabaseServiceRole) throw new Error("SUPABASE_SERVICE_ROLE_KEY is not set in .env");
+const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || "kbugigi@gmail.com").toLowerCase();
 
-const supabase = createClient(
-  supabaseUrl,
-  supabaseServiceRole
-);
-
+// ── App ───────────────────────────────────────────────────────────────────────
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// CORS configuration
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'", supabaseUrl],
+    },
+  },
+  crossOriginResourcePolicy: { policy: "same-site" },
+}));
+
 const allowedOrigins = [
   "http://localhost:8080",
   "http://localhost:5173",
-  process.env.FRONTEND_URL
-].filter((origin): origin is string => Boolean(origin));
+  process.env.FRONTEND_URL,
+].filter((o): o is string => Boolean(o));
 
-app.use(cors({ 
-  origin: allowedOrigins,
-  credentials: true 
-}));
+app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(express.json({ limit: "10mb" }));
 
-// Helper function to map frontend category to Prisma category
-function mapToPrismaCategory(category: Category): PrismaCategory {
-  const categoryMap: Record<Category, PrismaCategory> = {
-    "Web Dev": PrismaCategory.WEB_DEV,
-    "Design": PrismaCategory.DESIGN,
-    "Fine Art": PrismaCategory.FINE_ART
-  };
-  return categoryMap[category];
+app.use(rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many requests. Try again later." },
+}));
+
+const adminLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  message: { error: "Rate limit reached. Slow down." },
+});
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+interface AuthenticatedRequest extends Request {
+  userId?: string;
+  userEmail?: string;
 }
 
-// Helper function to map frontend link type to Prisma link type
-function mapToPrismaLinkType(linkType: string): PrismaLinkType {
-  const typeMap: Record<string, PrismaLinkType> = {
-    "live": PrismaLinkType.LIVE,
-    "repo": PrismaLinkType.REPO,
-    "shop": PrismaLinkType.SHOP,
-    "demo": PrismaLinkType.DEMO,
-    "other": PrismaLinkType.OTHER
-  };
-  return typeMap[linkType.toLowerCase()] || PrismaLinkType.OTHER;
-}
-
-// Types for incoming metadata from requests
 interface IncomingSoftwareMeta {
-  tech_stack?: string[];
-  techStack?: string[];
-  live_url?: string | null;
-  liveUrl?: string | null;
-  repo_url?: string | null;
-  repoUrl?: string | null;
-  lighthouse_score?: number | null;
-  lighthouseScore?: number | null;
-  page_load_ms?: number | null;
-  pageLoadMs?: number | null;
-  monthly_visitors?: number | null;
-  monthlyVisitors?: number | null;
+  tech_stack?: string[]; techStack?: string[];
+  live_url?: string | null; liveUrl?: string | null;
+  repo_url?: string | null; repoUrl?: string | null;
+  lighthouse_score?: number | null; lighthouseScore?: number | null;
+  page_load_ms?: number | null; pageLoadMs?: number | null;
+  monthly_visitors?: number | null; monthlyVisitors?: number | null;
   uptime?: number | null;
-  analytics_note?: string | null;
-  analyticsNote?: string | null;
+  analytics_note?: string | null; analyticsNote?: string | null;
 }
 
 interface IncomingArtMeta {
   medium?: string;
   dimensions?: string | null;
   year?: number | null;
-  is_available?: boolean;
-  isAvailable?: boolean;
+  is_available?: boolean; isAvailable?: boolean;
   price?: number | null;
-  shop_url?: string | null;
-  shopUrl?: string | null;
+  shop_url?: string | null; shopUrl?: string | null;
 }
 
 interface IncomingDesignMeta {
   software?: string[];
-  client_name?: string | null;
-  clientName?: string | null;
+  client_name?: string | null; clientName?: string | null;
   year?: number | null;
-  behance_url?: string | null;
-  behanceUrl?: string | null;
+  behance_url?: string | null; behanceUrl?: string | null;
 }
 
-// Auth middleware
-async function requireAuth(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
-  try {
-    const token = req.headers.authorization?.split(" ")[1];
-    if (!token) {
-      res.status(401).json({ error: "Unauthorized - No token provided" });
-      return;
-    }
-    
-    const { data: { user }, error } = await supabase.auth.getUser(token);
-    
-    if (error || !user) {
-      res.status(401).json({ error: "Invalid token" });
-      return;
-    }
-    
-    req.userId = user.id;
-    next();
-  } catch (error) {
-    res.status(401).json({ error: "Authentication failed" });
-  }
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+// FIX: Added Photography to the category map
+function mapToPrismaCategory(category: string): PrismaCategory {
+  const m: Record<string, PrismaCategory> = {
+    "Web Dev":     PrismaCategory.WEB_DEV,
+    "Design":      PrismaCategory.DESIGN,
+    "Fine Art":    PrismaCategory.FINE_ART,
+    "Photography": PrismaCategory.PHOTOGRAPHY,
+  };
+  const result = m[category];
+  if (!result) throw new Error(`Unknown category: "${category}". Valid values: Web Dev, Design, Fine Art, Photography`);
+  return result;
 }
 
-// GET all projects
-app.get("/api/projects", async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { category } = req.query;
-    
-    const where = category 
-      ? { category: mapToPrismaCategory(category as Category) }
-      : undefined;
-    
-    const projects = await prisma.project.findMany({
-      where,
-      include: { 
-        images: { orderBy: { displayOrder: "asc" } }, 
-        links: { orderBy: { displayOrder: "asc" } }
-      },
-      orderBy: { displayOrder: "asc" },
-    });
-    
-    res.json(projects);
-  } catch (err: unknown) {
-    const errorMessage = err instanceof Error ? err.message : "An unknown error occurred";
-    res.status(500).json({ error: errorMessage });
-  }
-});
+function mapToPrismaLinkType(linkType: string): PrismaLinkType {
+  const m: Record<string, PrismaLinkType> = {
+    live: PrismaLinkType.LIVE, repo: PrismaLinkType.REPO,
+    shop: PrismaLinkType.SHOP, demo: PrismaLinkType.DEMO, other: PrismaLinkType.OTHER,
+  };
+  return m[linkType?.toLowerCase()] || PrismaLinkType.OTHER;
+}
 
-// GET one project
-app.get("/api/projects/:id", async (req: Request, res: Response): Promise<void> => {
-  try {
-    const project = await prisma.project.findUnique({
-      where: { id: req.params.id },
-      include: { 
-        images: { orderBy: { displayOrder: "asc" } }, 
-        links: { orderBy: { displayOrder: "asc" } }
-      },
-    });
-    
-    if (!project) {
-      res.status(404).json({ error: "Project not found" });
-      return;
-    }
-    
-    res.json(project);
-  } catch (err: unknown) {
-    const errorMessage = err instanceof Error ? err.message : "An unknown error occurred";
-    res.status(500).json({ error: errorMessage });
-  }
-});
-
-// Normalizer functions
-function normalizeSoftwareMeta(meta: IncomingSoftwareMeta | undefined) {
+function normalizeSoftwareMeta(meta?: IncomingSoftwareMeta) {
   if (!meta) return undefined;
-  
   return {
     techStack: meta.tech_stack ?? meta.techStack ?? [],
     liveUrl: meta.live_url ?? meta.liveUrl ?? null,
@@ -198,9 +136,8 @@ function normalizeSoftwareMeta(meta: IncomingSoftwareMeta | undefined) {
   };
 }
 
-function normalizeArtMeta(meta: IncomingArtMeta | undefined) {
+function normalizeArtMeta(meta?: IncomingArtMeta) {
   if (!meta) return undefined;
-  
   return {
     medium: (meta.medium ?? "OTHER").toUpperCase().replace(/ /g, "_"),
     dimensions: meta.dimensions ?? null,
@@ -211,9 +148,8 @@ function normalizeArtMeta(meta: IncomingArtMeta | undefined) {
   };
 }
 
-function normalizeDesignMeta(meta: IncomingDesignMeta | undefined) {
+function normalizeDesignMeta(meta?: IncomingDesignMeta) {
   if (!meta) return undefined;
-  
   return {
     software: meta.software ?? [],
     clientName: meta.client_name ?? meta.clientName ?? null,
@@ -222,40 +158,108 @@ function normalizeDesignMeta(meta: IncomingDesignMeta | undefined) {
   };
 }
 
-// POST create project
-app.post("/api/projects", requireAuth, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+// ── Auth middleware ───────────────────────────────────────────────────────────
+async function requireAdmin(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) { res.status(401).json({ error: "Unauthorized" }); return; }
+
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    if (error || !user) { res.status(401).json({ error: "Invalid token" }); return; }
+
+    const emailMatch = user.email?.toLowerCase() === ADMIN_EMAIL;
+
+    if (!emailMatch) {
+      const { data: row } = await supabase
+        .from("users")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+      const r = row as { role?: string } | null;
+      if (r?.role !== "ADMIN") {
+        res.status(403).json({ error: "Forbidden — admin access required" });
+        return;
+      }
+    }
+
+    req.userId = user.id;
+    req.userEmail = user.email;
+    next();
+  } catch {
+    res.status(401).json({ error: "Authentication failed" });
+  }
+}
+
+// ── Public endpoints ──────────────────────────────────────────────────────────
+
+app.get("/api/health", (_req, res) => {
+  res.json({ status: "ok", timestamp: new Date().toISOString() });
+});
+
+app.get("/api/projects", async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { category } = req.query;
+    const where = category
+      ? { category: mapToPrismaCategory(category as string) }
+      : undefined;
+    const projects = await prisma.project.findMany({
+      where,
+      include: {
+        images: { orderBy: { displayOrder: "asc" } },
+        links: { orderBy: { displayOrder: "asc" } },
+        softwareMeta: true,
+        artMeta: true,
+        designMeta: true,
+      },
+      orderBy: { displayOrder: "asc" },
+    });
+    res.json(projects);
+  } catch (err) {
+    console.error("GET /api/projects error:", err);
+    res.status(500).json({ error: err instanceof Error ? err.message : "Unknown error" });
+  }
+});
+
+app.get("/api/projects/:id", async (req: Request, res: Response): Promise<void> => {
+  try {
+    const project = await prisma.project.findUnique({
+      where: { id: req.params.id },
+      include: {
+        images: { orderBy: { displayOrder: "asc" } },
+        links: { orderBy: { displayOrder: "asc" } },
+        softwareMeta: true,
+        artMeta: true,
+        designMeta: true,
+      },
+    });
+    if (!project) { res.status(404).json({ error: "Not found" }); return; }
+    res.json(project);
+  } catch (err) {
+    res.status(500).json({ error: err instanceof Error ? err.message : "Unknown error" });
+  }
+});
+
+// ── Admin-only mutating endpoints ─────────────────────────────────────────────
+
+app.post("/api/projects", requireAdmin, adminLimiter, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const body = req.body as ProjectFormData;
-    const { 
-      title, 
-      category, 
-      description, 
-      tags, 
-      displayOrder, 
-      featured, 
-      images = [], 
-      links = [], 
-      softwareMeta, 
-      artMeta, 
-      designMeta 
-    } = body;
+    const { title, category, description, tags, displayOrder, featured, images = [], links = [], softwareMeta, artMeta, designMeta } = body;
 
-    // Validate required fields
-    if (!title || !category) {
-      res.status(400).json({ error: "Title and category are required" });
+    if (!title || !category) { res.status(400).json({ error: "Title and category are required" }); return; }
+
+    // FIX: Wrap in try/catch to return a clear error if category is invalid
+    let prismaCategory: PrismaCategory;
+    try {
+      prismaCategory = mapToPrismaCategory(category as unknown as string);
+    } catch (e) {
+      res.status(400).json({ error: e instanceof Error ? e.message : "Invalid category" });
       return;
     }
 
-    // Normalize metadata
-    const normalizedSoftwareMeta = softwareMeta ? normalizeSoftwareMeta(softwareMeta as any) : undefined;
-    const normalizedArtMeta = artMeta ? normalizeArtMeta(artMeta as any) : undefined;
-    const normalizedDesignMeta = designMeta ? normalizeDesignMeta(designMeta as any) : undefined;
+    const categoryStr = category as unknown as string;
 
-    // Map category to Prisma enum
-    const prismaCategory = mapToPrismaCategory(category);
-
-    // Prepare data object
-    const data: any = {
+    const data: Record<string, unknown> = {
       title,
       category: prismaCategory,
       description: description ?? null,
@@ -269,89 +273,70 @@ app.post("/api/projects", requireAuth, async (req: AuthenticatedRequest, res: Re
           displayOrder: i,
         })),
       },
+      // FIX: Safely access linkType — it may be stored as `linkType` or `link_type`
       links: {
         create: links.map((l, i) => ({
           label: l.label,
           url: l.url,
-          linkType: mapToPrismaLinkType(l.linkType),
+          linkType: mapToPrismaLinkType((l as any).linkType ?? (l as any).link_type ?? "other"),
           displayOrder: i,
         })),
       },
     };
 
-    // Add metadata based on category
-    if (category === "Web Dev" && normalizedSoftwareMeta) {
-      data.softwareMeta = { create: normalizedSoftwareMeta };
+    // FIX: Photography uses designMeta (same model), added Photography case
+    if (categoryStr === "Web Dev" && softwareMeta) {
+      data.softwareMeta = { create: normalizeSoftwareMeta(softwareMeta as IncomingSoftwareMeta) };
     }
-    if (category === "Fine Art" && normalizedArtMeta) {
-      data.artMeta = { create: normalizedArtMeta };
+    if (categoryStr === "Fine Art" && artMeta) {
+      data.artMeta = { create: normalizeArtMeta(artMeta as IncomingArtMeta) };
     }
-    if (category === "Design" && normalizedDesignMeta) {
-      data.designMeta = { create: normalizedDesignMeta };
+    if ((categoryStr === "Design" || categoryStr === "Photography") && designMeta) {
+      data.designMeta = { create: normalizeDesignMeta(designMeta as IncomingDesignMeta) };
     }
 
-    // Create the project with relations
     const project = await prisma.project.create({
-      data,
-      include: { 
-        images: { orderBy: { displayOrder: "asc" } }, 
-        links: { orderBy: { displayOrder: "asc" } } 
+      data: data as Parameters<typeof prisma.project.create>[0]["data"],
+      include: {
+        images: { orderBy: { displayOrder: "asc" } },
+        links: { orderBy: { displayOrder: "asc" } },
+        softwareMeta: true,
+        artMeta: true,
+        designMeta: true,
       },
     });
-
     res.status(201).json(project);
-  } catch (err: unknown) {
+  } catch (err) {
     console.error("Error creating project:", err);
-    const errorMessage = err instanceof Error ? err.message : "An unknown error occurred";
-    res.status(500).json({ error: errorMessage });
+    res.status(500).json({ error: err instanceof Error ? err.message : "Unknown error" });
   }
 });
 
-// PUT update project
-app.put("/api/projects/:id", requireAuth, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+app.put("/api/projects/:id", requireAdmin, adminLimiter, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const id = req.params.id;
     const body = req.body as ProjectFormData;
-    const { 
-      title, 
-      category, 
-      description, 
-      tags, 
-      displayOrder, 
-      featured, 
-      images = [], 
-      links = [], 
-      softwareMeta, 
-      artMeta, 
-      designMeta 
-    } = body;
+    const { title, category, description, tags, displayOrder, featured, images = [], links = [], softwareMeta, artMeta, designMeta } = body;
 
-    // Check if project exists
-    const existingProject = await prisma.project.findUnique({
-      where: { id }
-    });
+    const existing = await prisma.project.findUnique({ where: { id } });
+    if (!existing) { res.status(404).json({ error: "Not found" }); return; }
 
-    if (!existingProject) {
-      res.status(404).json({ error: "Project not found" });
+    let prismaCategory: PrismaCategory;
+    try {
+      prismaCategory = mapToPrismaCategory(category as unknown as string);
+    } catch (e) {
+      res.status(400).json({ error: e instanceof Error ? e.message : "Invalid category" });
       return;
     }
 
-    // Normalize metadata
-    const normalizedSoftwareMeta = softwareMeta ? normalizeSoftwareMeta(softwareMeta as any) : undefined;
-    const normalizedArtMeta = artMeta ? normalizeArtMeta(artMeta as any) : undefined;
-    const normalizedDesignMeta = designMeta ? normalizeDesignMeta(designMeta as any) : undefined;
+    const categoryStr = category as unknown as string;
 
-    // Map category to Prisma enum
-    const prismaCategory = mapToPrismaCategory(category);
-
-    // Delete existing relations
     await prisma.$transaction([
       prisma.projectImage.deleteMany({ where: { projectId: id } }),
       prisma.projectLink.deleteMany({ where: { projectId: id } }),
     ]);
 
-    // Prepare data object
-    const data: any = {
+    const data: Record<string, unknown> = {
       title,
       category: prismaCategory,
       description: description ?? null,
@@ -369,102 +354,99 @@ app.put("/api/projects/:id", requireAuth, async (req: AuthenticatedRequest, res:
         create: links.map((l, i) => ({
           label: l.label,
           url: l.url,
-          linkType: mapToPrismaLinkType(l.linkType),
+          linkType: mapToPrismaLinkType((l as any).linkType ?? (l as any).link_type ?? "other"),
           displayOrder: i,
         })),
       },
     };
 
-    // Add metadata based on category
-    if (category === "Web Dev" && normalizedSoftwareMeta) {
-      data.softwareMeta = { 
-        upsert: { 
-          create: normalizedSoftwareMeta, 
-          update: normalizedSoftwareMeta 
-        } 
-      };
+    const upsert = (d: Record<string, unknown>) => ({ upsert: { create: d, update: d } });
+    const nSW  = normalizeSoftwareMeta(softwareMeta as IncomingSoftwareMeta);
+    const nArt = normalizeArtMeta(artMeta as IncomingArtMeta);
+    const nDes = normalizeDesignMeta(designMeta as IncomingDesignMeta);
+
+    if (categoryStr === "Web Dev" && nSW) {
+      data.softwareMeta = upsert(nSW as unknown as Record<string, unknown>);
     }
-    if (category === "Fine Art" && normalizedArtMeta) {
-      data.artMeta = { 
-        upsert: { 
-          create: normalizedArtMeta, 
-          update: normalizedArtMeta 
-        } 
-      };
+    if (categoryStr === "Fine Art" && nArt) {
+      data.artMeta = upsert(nArt as unknown as Record<string, unknown>);
     }
-    if (category === "Design" && normalizedDesignMeta) {
-      data.designMeta = { 
-        upsert: { 
-          create: normalizedDesignMeta, 
-          update: normalizedDesignMeta 
-        } 
-      };
+    if ((categoryStr === "Design" || categoryStr === "Photography") && nDes) {
+      data.designMeta = upsert(nDes as unknown as Record<string, unknown>);
     }
 
-    // Update the project with new relations
     const project = await prisma.project.update({
       where: { id },
-      data,
-      include: { 
-        images: { orderBy: { displayOrder: "asc" } }, 
-        links: { orderBy: { displayOrder: "asc" } } 
+      data: data as Parameters<typeof prisma.project.update>[0]["data"],
+      include: {
+        images: { orderBy: { displayOrder: "asc" } },
+        links: { orderBy: { displayOrder: "asc" } },
+        softwareMeta: true,
+        artMeta: true,
+        designMeta: true,
       },
     });
-
     res.json(project);
-  } catch (err: unknown) {
+  } catch (err) {
     console.error("Error updating project:", err);
-    const errorMessage = err instanceof Error ? err.message : "An unknown error occurred";
-    res.status(500).json({ error: errorMessage });
+    res.status(500).json({ error: err instanceof Error ? err.message : "Unknown error" });
   }
 });
 
-// DELETE project
-app.delete("/api/projects/:id", requireAuth, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+app.delete("/api/projects/:id", requireAdmin, adminLimiter, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const id = req.params.id;
+    const existing = await prisma.project.findUnique({ where: { id } });
+    if (!existing) { res.status(404).json({ error: "Not found" }); return; }
+    await prisma.project.delete({ where: { id } });
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Error deleting project:", err);
+    res.status(500).json({ error: err instanceof Error ? err.message : "Unknown error" });
+  }
+});
 
-    // Check if project exists
-    const existingProject = await prisma.project.findUnique({
-      where: { id }
-    });
+// ── Admin: generate Supabase Storage signed upload URL ────────────────────────
+app.post("/api/admin/upload-url", requireAdmin, adminLimiter, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const { filename, contentType, bucket = "portfolio" } = req.body as {
+      filename: string;
+      contentType: string;
+      bucket?: string;
+    };
 
-    if (!existingProject) {
-      res.status(404).json({ error: "Project not found" });
+    if (!filename || !contentType) {
+      res.status(400).json({ error: "filename and contentType required" });
       return;
     }
 
-    // Delete project (relations will be deleted automatically due to cascade)
-    await prisma.project.delete({
-      where: { id }
-    });
+    const safe = filename.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const key = `${Date.now()}-${safe}`;
 
-    res.json({ success: true, message: "Project deleted successfully" });
-  } catch (err: unknown) {
-    console.error("Error deleting project:", err);
-    const errorMessage = err instanceof Error ? err.message : "An unknown error occurred";
-    res.status(500).json({ error: errorMessage });
+    const { data, error } = await supabase.storage
+      .from(bucket)
+      .createSignedUploadUrl(key);
+
+    if (error || !data) {
+      res.status(500).json({ error: error?.message || "Could not create upload URL" });
+      return;
+    }
+
+    const publicUrl = supabase.storage.from(bucket).getPublicUrl(key).data.publicUrl;
+    res.json({ signedUrl: data.signedUrl, token: data.token, key, publicUrl });
+  } catch (err) {
+    res.status(500).json({ error: err instanceof Error ? err.message : "Unknown error" });
   }
 });
 
-// Health check endpoint
-app.get("/api/health", (_req: Request, res: Response): void => {
-  res.json({ status: "ok", timestamp: new Date().toISOString() });
-});
-
-// 404 handler for undefined routes
-app.use((_req: Request, res: Response): void => {
-  res.status(404).json({ error: "Route not found" });
-});
-
-// Global error handler
-app.use((err: Error, _req: Request, res: Response, _next: NextFunction): void => {
+// ── 404 & global error ────────────────────────────────────────────────────────
+app.use((_req, res) => res.status(404).json({ error: "Not found" }));
+app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   console.error("Unhandled error:", err);
   res.status(500).json({ error: "Internal server error" });
 });
 
-// Start server
 app.listen(PORT, () => {
-  console.log(`🚀 API server running on http://localhost:${PORT}`);
-  console.log(`📝 Health check: http://localhost:${PORT}/api/health`);
+  console.log(`🚀 API: http://localhost:${PORT}`);
+  console.log(`🔒 Admin email: ${ADMIN_EMAIL}`);
 });

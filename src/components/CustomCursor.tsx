@@ -5,22 +5,35 @@ const CustomCursor = () => {
   const [pos, setPos] = useState({ x: 0, y: 0 });
   const [hovering, setHovering] = useState(false);
   const [visible, setVisible] = useState(false);
+  const [isTouch, setIsTouch] = useState(false);
+
+  // Detect touch device safely inside useEffect (avoids SSR crash)
+  useEffect(() => {
+    setIsTouch(window.matchMedia("(pointer: coarse)").matches);
+  }, []);
 
   const onMove = useCallback((e: MouseEvent) => {
     setPos({ x: e.clientX, y: e.clientY });
-    if (!visible) setVisible(true);
-  }, [visible]);
+    setVisible(true);
+  }, []);
 
   useEffect(() => {
+    if (isTouch) return;
     window.addEventListener("mousemove", onMove);
     return () => window.removeEventListener("mousemove", onMove);
-  }, [onMove]);
+  }, [onMove, isTouch]);
 
+  // Fixed: added [] dependency array to prevent duplicate listeners on every render
   useEffect(() => {
+    if (isTouch) return;
+
     const handleOver = () => setHovering(true);
     const handleOut = () => setHovering(false);
 
-    const interactives = document.querySelectorAll("a, button, input, textarea, select, [role='button']");
+    const interactives = document.querySelectorAll(
+      "a, button, input, textarea, select, [role='button']"
+    );
+
     interactives.forEach((el) => {
       el.addEventListener("mouseenter", handleOver);
       el.addEventListener("mouseleave", handleOut);
@@ -32,12 +45,9 @@ const CustomCursor = () => {
         el.removeEventListener("mouseleave", handleOut);
       });
     };
-  });
+  }, [isTouch]); // runs once on mount (and if isTouch changes)
 
-  // Hide on touch devices
-  if (typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches) {
-    return null;
-  }
+  if (isTouch) return null;
 
   return (
     <>

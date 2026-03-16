@@ -1,3 +1,5 @@
+//src/components/TypewriterEffects.tsx
+
 import { useState, useEffect } from "react";
 
 const roles = [

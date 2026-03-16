@@ -1,6 +1,7 @@
 // src/components/ProtectedRoute.tsx
 import { Navigate } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/hooks/useAuth";
+import { Loader2 } from "lucide-react";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -16,7 +17,7 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
           <div className="w-10 h-10 rounded-xl bg-gradient-amber flex items-center justify-center font-display font-bold text-primary-foreground text-lg animate-pulse">
             K
           </div>
-          <div className="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+          <Loader2 size={20} className="animate-spin text-primary" />
         </div>
       </div>
     );
