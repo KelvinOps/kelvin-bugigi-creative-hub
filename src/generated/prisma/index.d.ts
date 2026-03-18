@@ -64,7 +64,8 @@ export type Role = (typeof Role)[keyof typeof Role]
 export const Category: {
   WEB_DEV: 'WEB_DEV',
   DESIGN: 'DESIGN',
-  FINE_ART: 'FINE_ART'
+  FINE_ART: 'FINE_ART',
+  PHOTOGRAPHY: 'PHOTOGRAPHY'
 };
 
 export type Category = (typeof Category)[keyof typeof Category]

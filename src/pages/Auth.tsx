@@ -1,5 +1,4 @@
 // src/pages/Auth.tsx
-// Admin portal — supports first-time account creation (setup mode)
 
 
 import { useState, useEffect } from "react";

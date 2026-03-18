@@ -217,7 +217,8 @@ exports.Role = exports.$Enums.Role = {
 exports.Category = exports.$Enums.Category = {
   WEB_DEV: 'WEB_DEV',
   DESIGN: 'DESIGN',
-  FINE_ART: 'FINE_ART'
+  FINE_ART: 'FINE_ART',
+  PHOTOGRAPHY: 'PHOTOGRAPHY'
 };
 
 exports.LinkType = exports.$Enums.LinkType = {
