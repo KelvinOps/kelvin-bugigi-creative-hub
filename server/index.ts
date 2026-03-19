@@ -1,8 +1,12 @@
 // server/index.ts — security-hardened with role verification, helmet, rate limiting
+// + image proxy endpoint to bypass browser CORS/CORP restrictions on Supabase Storage
 import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
+import https from "https";
+import http from "http";
+import { URL } from "url";
 import { PrismaClient, Category as PrismaCategory, LinkType as PrismaLinkType } from "../src/generated/prisma";
 import { PrismaPg } from "@prisma/adapter-pg";
 import pg from "pg";
@@ -29,13 +33,19 @@ const supabase = createClient(supabaseUrl, supabaseServiceRole);
 const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || "kbugigi@gmail.com").toLowerCase();
 
 // ── Derive the Supabase storage hostname for CSP/CORP headers ─────────────────
-// e.g. "https://abcxyz.supabase.co" → "abcxyz.supabase.co"
 let supabaseStorageHost = "";
 try {
-  supabaseStorageHost = new URL(supabaseUrl).hostname; // e.g. "abcxyz.supabase.co"
+  supabaseStorageHost = new URL(supabaseUrl).hostname;
 } catch {
   console.warn("Could not parse VITE_SUPABASE_URL for CSP host extraction");
 }
+
+// ── Allowed image proxy hosts (only proxy from trusted origins) ───────────────
+const ALLOWED_PROXY_HOSTS = [
+  supabaseStorageHost,
+  "supabase.co",
+  "supabase.in",
+].filter(Boolean);
 
 // ── App ───────────────────────────────────────────────────────────────────────
 const app = express();
@@ -46,15 +56,11 @@ app.use(
     contentSecurityPolicy: {
       directives: {
         defaultSrc:  ["'self'"],
-        // !! FIXED: allow images from Supabase storage and any https source.
-        // The previous config only allowed 'self', data:, and https: which some
-        // browsers interpret strictly and block cross-origin image requests.
         imgSrc: [
           "'self'",
           "data:",
           "blob:",
           "https:",
-          // Explicitly list the Supabase storage origin so no ambiguity remains
           ...(supabaseStorageHost ? [`https://${supabaseStorageHost}`] : []),
         ],
         connectSrc: [
@@ -67,13 +73,9 @@ app.use(
         fontSrc:    ["'self'", "https:", "data:"],
       },
     },
-    // !! FIXED: "same-site" blocks browsers from loading images that come from
-    // a DIFFERENT origin (Supabase storage) even when the CSP allows them.
-    // "cross-origin" tells the browser: this resource MAY be embedded by any
-    // origin, which is what we need for a portfolio site serving public images.
+    // CRITICAL: "cross-origin" lets browsers load proxied images from this server
     crossOriginResourcePolicy: { policy: "cross-origin" },
-    // Keep other sensible defaults
-    crossOriginEmbedderPolicy: false, // set true only if you need COEP isolation
+    crossOriginEmbedderPolicy: false,
   })
 );
 
@@ -98,6 +100,13 @@ const adminLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 30,
   message: { error: "Rate limit reached. Slow down." },
+});
+
+// ── Image proxy rate limiter (generous — images load on every page view) ──────
+const proxyLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 500,
+  message: { error: "Image proxy rate limit reached." },
 });
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -246,6 +255,119 @@ async function requireAdmin(req: AuthenticatedRequest, res: Response, next: Next
 // ── Public endpoints ──────────────────────────────────────────────────────────
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
+});
+
+// ── IMAGE PROXY ENDPOINT ──────────────────────────────────────────────────────
+// Fetches images from Supabase Storage server-side and streams them back to the
+// browser. This completely bypasses browser CORS / CORP enforcement because the
+// request goes server → Supabase (no browser involved) and the response comes
+// back from YOUR own origin — so no cross-origin policy applies on the client.
+//
+// Usage:  /api/image-proxy?url=https://xxx.supabase.co/storage/v1/object/public/...
+//
+app.get("/api/image-proxy", proxyLimiter, async (req: Request, res: Response): Promise<void> => {
+  const rawUrl = req.query.url as string | undefined;
+
+  // ── Validation ────────────────────────────────────────────────────────────
+  if (!rawUrl) {
+    res.status(400).json({ error: "Missing url query parameter" });
+    return;
+  }
+
+  let parsed: URL;
+  try {
+    parsed = new URL(rawUrl);
+  } catch {
+    res.status(400).json({ error: "Invalid URL" });
+    return;
+  }
+
+  // Only allow https
+  if (parsed.protocol !== "https:") {
+    res.status(400).json({ error: "Only https URLs are allowed" });
+    return;
+  }
+
+  // Only proxy from trusted Supabase hosts (security: prevent open-proxy abuse)
+  const isAllowed = ALLOWED_PROXY_HOSTS.some(
+    (host) => parsed.hostname === host || parsed.hostname.endsWith(`.${host}`)
+  );
+  if (!isAllowed) {
+    res.status(403).json({ error: `Host not allowed: ${parsed.hostname}` });
+    return;
+  }
+
+  // ── Fetch & stream ────────────────────────────────────────────────────────
+  try {
+    const protocol = parsed.protocol === "https:" ? https : http;
+
+    const proxyReq = protocol.get(
+      rawUrl,
+      {
+        headers: {
+          // Pass a browser-like UA so Supabase Storage doesn't reject the request
+          "User-Agent": "Mozilla/5.0 (compatible; PortfolioProxy/1.0)",
+          "Accept":     "image/webp,image/avif,image/*,*/*;q=0.8",
+        },
+        timeout: 15_000,
+      },
+      (proxyRes) => {
+        // Follow a single redirect (Supabase sometimes issues a 302)
+        if (
+          proxyRes.statusCode &&
+          proxyRes.statusCode >= 300 &&
+          proxyRes.statusCode < 400 &&
+          proxyRes.headers.location
+        ) {
+          // Redirect: recurse once by returning an internal redirect
+          res.redirect(`/api/image-proxy?url=${encodeURIComponent(proxyRes.headers.location)}`);
+          return;
+        }
+
+        if (!proxyRes.statusCode || proxyRes.statusCode < 200 || proxyRes.statusCode >= 300) {
+          res.status(proxyRes.statusCode ?? 502).json({
+            error: `Upstream returned ${proxyRes.statusCode}`,
+          });
+          return;
+        }
+
+        // Forward content-type and cache headers
+        const contentType = proxyRes.headers["content-type"] ?? "image/jpeg";
+        res.setHeader("Content-Type", contentType);
+        res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+        // Explicitly set CORP to cross-origin on this response so any embedded
+        // frame or worker that loads images is also unblocked
+        res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+        res.setHeader("Access-Control-Allow-Origin", "*");
+
+        if (proxyRes.headers["content-length"]) {
+          res.setHeader("Content-Length", proxyRes.headers["content-length"]);
+        }
+
+        res.status(200);
+        proxyRes.pipe(res, { end: true });
+      }
+    );
+
+    proxyReq.on("error", (err) => {
+      console.error("[image-proxy] Request error:", err.message);
+      if (!res.headersSent) {
+        res.status(502).json({ error: "Failed to fetch image" });
+      }
+    });
+
+    proxyReq.on("timeout", () => {
+      proxyReq.destroy();
+      if (!res.headersSent) {
+        res.status(504).json({ error: "Image fetch timed out" });
+      }
+    });
+  } catch (err) {
+    console.error("[image-proxy] Unexpected error:", err);
+    if (!res.headersSent) {
+      res.status(500).json({ error: "Internal proxy error" });
+    }
+  }
 });
 
 app.get("/api/projects", async (req: Request, res: Response): Promise<void> => {
@@ -426,4 +548,5 @@ app.listen(PORT, () => {
   console.log(`🚀 API: http://localhost:${PORT}`);
   console.log(`🔒 Admin email: ${ADMIN_EMAIL}`);
   console.log(`🖼  Images allowed from: ${supabaseStorageHost || "(any https)"}`);
+  console.log(`🔀 Image proxy: http://localhost:${PORT}/api/image-proxy?url=<encoded-url>`);
 });

@@ -12,6 +12,19 @@ import { supabase } from "@/integrations/supabase/client";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
 
+// ── Image proxy helper ────────────────────────────────────────────────────────
+// Routes Supabase Storage images through our own server-side proxy endpoint,
+// completely bypassing browser CORS / Cross-Origin-Resource-Policy enforcement.
+// data: and blob: URIs are returned unchanged since they are already same-origin.
+function proxyUrl(src: string): string {
+  if (!src || !src.trim()) return src;
+  if (src.startsWith("data:") || src.startsWith("blob:")) return src;
+  if (src.startsWith("https://") || src.startsWith("http://")) {
+    return `${API}/image-proxy?url=${encodeURIComponent(src)}`;
+  }
+  return src;
+}
+
 const filters = ["All", "Web Dev", "Design", "Fine Art", "Photography"];
 
 // ─── Category normalisation ───────────────────────────────────────────────────
@@ -164,6 +177,14 @@ function normalizeProject(p: RawProject): Project {
   };
 }
 
+// ─── Resolve live URL ─────────────────────────────────────────────────────────
+function resolveLiveUrl(project: Project): string | undefined {
+  if (project.softwareMeta?.live_url) return project.softwareMeta.live_url;
+  if (project.designMeta?.behance_url) return project.designMeta.behance_url;
+  if (project.artMeta?.shop_url && project.artMeta.shop_url !== "#") return project.artMeta.shop_url;
+  return project.links.find(l => l.link_type === "live" || l.link_type === "demo")?.url;
+}
+
 // ─── Link icon ────────────────────────────────────────────────────────────────
 const linkIcon = (type: string) => {
   switch (type) {
@@ -176,37 +197,25 @@ const linkIcon = (type: string) => {
 };
 
 // ─── Safe image ───────────────────────────────────────────────────────────────
-// crossOrigin="anonymous" has been intentionally removed.
-// Supabase Storage may not return the CORS headers needed for that mode,
-// causing the browser to block an otherwise-valid image load. We rely solely
-// on the React onError state to show the fallback instead.
-function isValidUrl(src: string): boolean {
-  if (!src || !src.trim()) return false;
-  // Accept http/https URLs and base64 data URIs
-  return src.startsWith("http://") ||
-    src.startsWith("https://") ||
-    src.startsWith("data:image/");
-}
-
+// Passes src through proxyUrl() so the browser always loads images from the
+// same origin (our Express server). No CORS / CORP headers can block it.
 function SafeImage({
   src, alt, className, fallback,
 }: {
   src: string; alt: string; className: string; fallback: React.ReactNode;
 }) {
+  const proxied = proxyUrl(src);
   const [errored, setErrored] = useState(false);
 
-  // Reset error state whenever the src changes
-  useEffect(() => { setErrored(false); }, [src]);
+  useEffect(() => { setErrored(false); }, [proxied]);
 
-  // Reject obviously invalid URLs before even attempting to render an <img>
-  if (!isValidUrl(src) || errored) return <>{fallback}</>;
+  if (!proxied || errored) return <>{fallback}</>;
 
   return (
     <img
-      src={src}
+      src={proxied}
       alt={alt}
       className={className}
-      // !! No crossOrigin attribute — avoids CORS preflight rejection from Supabase Storage !!
       onError={() => setErrored(true)}
     />
   );
@@ -258,6 +267,20 @@ const EmptyState = ({ active }: { active: string }) => (
   </div>
 );
 
+// ─── Live URL badge ───────────────────────────────────────────────────────────
+const LiveUrlBadge = ({ url, style }: { url: string; style: CategoryStyle }) => (
+  <a
+    href={url}
+    target="_blank"
+    rel="noopener noreferrer"
+    onClick={e => e.stopPropagation()}
+    className={`inline-flex items-center gap-1 px-2 py-1 rounded-full ${style.bg} ${style.accent} font-mono text-xs hover:underline mt-2`}
+    title="Open live site"
+  >
+    <Globe size={10} /> Live
+  </a>
+);
+
 // ─── Main Portfolio ───────────────────────────────────────────────────────────
 const Portfolio = () => {
   const [active,   setActive]   = useState("All");
@@ -269,27 +292,17 @@ const Portfolio = () => {
     const load = async () => {
       setLoading(true);
 
-      // ── Express API ───────────────────────────────────────────────────────
       try {
         const res = await fetch(`${API}/projects`);
         if (res.ok) {
           const raw: RawProject[] = await res.json();
           const normalised = raw.map(normalizeProject);
-          if (normalised.length > 0) {
-            console.log("[Portfolio] sample project:", {
-              id:       normalised[0].id,
-              title:    normalised[0].title,
-              category: normalised[0].category,
-              images:   normalised[0].images,
-            });
-          }
           setProjects(normalised);
           setLoading(false);
           return;
         }
       } catch (_) { /* fall through to Supabase */ }
 
-      // ── Supabase fallback ─────────────────────────────────────────────────
       try {
         const { data: projs } = await supabase.from("projects").select("*").order("display_order");
         if (!projs?.length) { setProjects([]); setLoading(false); return; }
@@ -331,7 +344,11 @@ const Portfolio = () => {
       setLightbox({ ...lightbox, imageIdx: next });
   }, [lightbox, currentProject]);
 
-  const getSpan = (i: number) => i % 3 === 0 ? "md:col-span-7" : i % 3 === 1 ? "md:col-span-5" : "md:col-span-6";
+  const getSpan = (project: Project, i: number) => {
+    if (project.featured && i === 0) return "md:col-span-8";
+    if (project.featured && i === 1 && filtered[0]?.featured) return "md:col-span-4";
+    return "md:col-span-4";
+  };
 
   return (
     <div>
@@ -379,18 +396,20 @@ const Portfolio = () => {
                   const style    = getStyle(project.category);
                   const Icon     = style.icon;
                   const firstImg = project.images[0] ?? "";
+                  const liveUrl  = resolveLiveUrl(project);
 
                   return (
                     <motion.div
                       key={project.id} layout
                       initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.3, delay: i * 0.05 }}
-                      className={`group relative rounded-2xl overflow-hidden bg-card border ${style.border} hover:border-opacity-80 transition-all col-span-12 ${getSpan(i)}`}
+                      className={`group relative rounded-2xl overflow-hidden bg-card border ${style.border} hover:border-opacity-80 transition-all col-span-12 ${getSpan(project, i)}`}
                     >
-                      {/* Image */}
-                      <div className="aspect-[4/3] overflow-hidden cursor-pointer relative"
-                        onClick={() => setLightbox({ projectIdx: i, imageIdx: 0 })}>
-
+                      {/* Image area */}
+                      <div
+                        className="aspect-[16/10] overflow-hidden cursor-pointer relative"
+                        onClick={() => setLightbox({ projectIdx: i, imageIdx: 0 })}
+                      >
                         <SafeImage
                           src={firstImg}
                           alt={project.title}
@@ -446,11 +465,15 @@ const Portfolio = () => {
                           <div className="min-w-0 flex-1">
                             <span className={`${style.accent} font-mono text-xs uppercase`}>{project.category}</span>
                             <h3 className="font-display font-semibold text-foreground text-sm mt-0.5 truncate">{project.title}</h3>
+
                             {project.category === "Web Dev"     && project.softwareMeta && <AnalyticsBadges   meta={project.softwareMeta} />}
                             {project.category === "Fine Art"    && project.artMeta      && <ArtBadges         meta={project.artMeta}      />}
                             {project.category === "Design"      && project.designMeta   && <DesignBadges      meta={project.designMeta}   />}
                             {project.category === "Photography" && project.designMeta   && <PhotographyBadges meta={project.designMeta}   />}
+
+                            {liveUrl && <LiveUrlBadge url={liveUrl} style={style} />}
                           </div>
+
                           <div className="flex items-center gap-1.5 flex-shrink-0 mt-1">
                             {project.links.slice(0, 3).map((link, li) => (
                               <a key={li} href={link.url} target="_blank" rel="noopener noreferrer"
@@ -472,7 +495,7 @@ const Portfolio = () => {
         </div>
       </section>
 
-      {/* ── Lightbox ── */}
+      {/* Lightbox */}
       <AnimatePresence>
         {lightbox !== null && currentProject && (() => {
           const cs = getStyle(currentProject.category);
