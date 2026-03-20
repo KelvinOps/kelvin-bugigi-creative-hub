@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-     "dev": "concurrently -n \"vite,api\" -c \"cyan,yellow\" \"vite\" \"tsx watch server/index.ts\"",
+    "dev": "concurrently -n \"vite,api\" -c \"cyan,yellow\" \"vite\" \"tsx watch server/index.ts\"",
     "dev:api": "tsx watch server/index.ts",
     "dev:full": "concurrently -n \"vite,api\" -c \"cyan,yellow\" \"npm run dev:vite\" \"npm run dev:api\"",
     "dev:vite": "vite",
@@ -19,6 +19,7 @@
     "prisma:migrate": "prisma migrate dev"
   },
   "dependencies": {
+    "@emailjs/browser": "^4.4.1",
     "@hookform/resolvers": "^3.10.0",
     "@prisma/adapter-pg": "^7.4.0",
     "@prisma/client": "^7.4.0",

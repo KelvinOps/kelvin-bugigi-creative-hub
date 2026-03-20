@@ -1,3 +1,5 @@
+//src/components/NoiseOverlay.tsx
+
 const NoiseOverlay = () => (
   <div
     className="fixed inset-0 z-[60] pointer-events-none opacity-[0.025]"
