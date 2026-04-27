@@ -1,5 +1,5 @@
 // src/contexts/AuthContext.tsx
-// Security-hardened: rate limiting, session fingerprinting, admin-only sign-in
+
 import { createContext, useEffect, useState, useRef, ReactNode } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";

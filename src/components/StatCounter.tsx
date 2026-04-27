@@ -1,3 +1,5 @@
+//components/StatCounter.tsx
+
 import { useEffect, useState, useRef } from "react";
 
 interface StatCounterProps {

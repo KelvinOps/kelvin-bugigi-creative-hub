@@ -1,11 +1,4 @@
 // src/pages/Admin.tsx
-// Full-featured admin dashboard with all fixes applied:
-// ✓ Category normalized to Prisma enum keys (WEB_DEV, DESIGN, FINE_ART, PHOTOGRAPHY)
-// ✓ Tags split correctly on comma/semicolon/·/newline
-// ✓ Equipment/software tags split correctly
-// ✓ Image URL normalized (camelCase + snake_case)
-// ✓ Live URL button on project cards
-// ✓ Filter & stats work with both Prisma keys and display labels
 
 import { useEffect, useState, useRef } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
