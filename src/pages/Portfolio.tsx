@@ -10,26 +10,39 @@ import {
 import PageHeader from "@/components/PageHeader";
 import { supabase } from "@/integrations/supabase/client";
 
-const API = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
+// ── API base — strip trailing slash ──────────────────────────────────────────
+const API_BASE = (import.meta.env.VITE_API_URL || "http://localhost:3001/api").replace(/\/$/, "");
 
-// ── Image proxy helper ────────────────────────────────────────────────────────.
-function proxyUrl(src: string): string {
-  if (!src || !src.trim()) return src;
-  if (src.startsWith("data:") || src.startsWith("blob:")) return src;
-  if (src.startsWith("https://") || src.startsWith("http://")) {
-    return `${API}/image-proxy?url=${encodeURIComponent(src)}`;
+// ── Image source resolver ─────────────────────────────────────────────────────
+// Handles three cases:
+//   1. base64 data URLs  → return as-is (no proxy needed, no CORS issues)
+//   2. blob: URLs        → return as-is
+//   3. http/https URLs   → route through server-side proxy to bypass CORP/CORS
+function resolveImageSrc(src: string): string {
+  if (!src || !src.trim()) return "";
+  const trimmed = src.trim();
+  // Base64 data URLs and blob URLs never need proxying
+  if (trimmed.startsWith("data:") || trimmed.startsWith("blob:")) return trimmed;
+  // Remote URLs go through the proxy
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+    return `${API_BASE}/image-proxy?url=${encodeURIComponent(trimmed)}`;
   }
-  return src;
+  return trimmed;
+}
+
+// ── Check if a URL is a base64 data URL ──────────────────────────────────────
+function isDataUrl(src: string): boolean {
+  return src.trim().startsWith("data:");
 }
 
 const filters = ["All", "Web Dev", "Design", "Fine Art", "Photography"];
 
 // ─── Category normalisation ───────────────────────────────────────────────────
 const PRISMA_TO_DISPLAY: Record<string, string> = {
-  WEB_DEV:      "Web Dev",
-  DESIGN:       "Design",
-  FINE_ART:     "Fine Art",
-  PHOTOGRAPHY:  "Photography",
+  WEB_DEV:       "Web Dev",
+  DESIGN:        "Design",
+  FINE_ART:      "Fine Art",
+  PHOTOGRAPHY:   "Photography",
   "Web Dev":     "Web Dev",
   "Design":      "Design",
   "Fine Art":    "Fine Art",
@@ -116,9 +129,25 @@ interface RawProject {
 }
 
 // ─── Supabase row shapes ──────────────────────────────────────────────────────
-interface SupabaseProject { id: string; title: string; category: string; description?: string; tags?: string[]; }
-interface SupabaseImage   { image_url: string; }
-interface SupabaseLink    { label: string; url: string; link_type: string; }
+interface SupabaseProject {
+  id: string; title: string; category: string;
+  description?: string; tags?: string[]; featured?: boolean;
+  display_order?: number;
+}
+interface SupabaseImage   { image_url: string; display_order?: number; }
+interface SupabaseLink    { label: string; url: string; link_type: string; display_order?: number; }
+interface SupabaseSoftwareMeta {
+  tech_stack?: string[]; live_url?: string; repo_url?: string;
+  lighthouse_score?: number; page_load_ms?: number;
+  monthly_visitors?: number; uptime?: number; analytics_note?: string;
+}
+interface SupabaseArtMeta {
+  medium?: string; dimensions?: string; year?: number;
+  is_available?: boolean; price?: number; shop_url?: string;
+}
+interface SupabaseDesignMeta {
+  software?: string[]; client_name?: string; year?: number; behance_url?: string;
+}
 
 // ─── Meta normalizers ─────────────────────────────────────────────────────────
 function normalizeSoftwareMeta(m: RawSoftwareMeta): SoftwareMeta {
@@ -175,11 +204,34 @@ function normalizeProject(p: RawProject): Project {
 }
 
 // ─── Resolve live URL ─────────────────────────────────────────────────────────
+// Priority: softwareMeta.live_url -> designMeta.behance_url -> artMeta.shop_url
+//           -> link typed "live" -> link typed "demo" -> link typed "shop"
+//           -> link typed "other" -> first available link (any type)
+// This ensures the CTA button always appears when any link exists.
 function resolveLiveUrl(project: Project): string | undefined {
-  if (project.softwareMeta?.live_url) return project.softwareMeta.live_url;
-  if (project.designMeta?.behance_url) return project.designMeta.behance_url;
+  if (project.softwareMeta?.live_url)                                return project.softwareMeta.live_url;
+  if (project.designMeta?.behance_url)                               return project.designMeta.behance_url;
   if (project.artMeta?.shop_url && project.artMeta.shop_url !== "#") return project.artMeta.shop_url;
-  return project.links.find(l => l.link_type === "live" || l.link_type === "demo")?.url;
+  const byType = (t: string) => project.links.find(l => l.link_type === t)?.url;
+  return (
+    byType("live")  ??
+    byType("demo")  ??
+    byType("shop")  ??
+    byType("other") ??
+    project.links[0]?.url
+  );
+}
+
+// ─── Resolve the label for the primary CTA button ────────────────────────────
+function resolvePrimaryLinkLabel(project: Project, liveUrl: string): string {
+  // If the URL came from a named link, use that link's label
+  const matchedLink = project.links.find(l => l.url === liveUrl);
+  if (matchedLink?.label) return matchedLink.label;
+  // Otherwise fall back to category-specific defaults
+  if (project.category === "Fine Art")    return "View / Purchase";
+  if (project.category === "Photography") return "View Gallery";
+  if (project.category === "Design")      return "View Project";
+  return "Visit Live Site";
 }
 
 // ─── Link icon ────────────────────────────────────────────────────────────────
@@ -193,25 +245,71 @@ const linkIcon = (type: string) => {
   }
 };
 
-// ─── Safe image ───────────────────────────────────────────────────────────────
+// ─── Smart Image component ────────────────────────────────────────────────────
+// Handles base64 data URLs directly (no proxy, no CORS issues).
+// For remote URLs, tries proxy first then falls back to direct.
 function SafeImage({
   src, alt, className, fallback,
 }: {
   src: string; alt: string; className: string; fallback: React.ReactNode;
 }) {
-  const proxied = proxyUrl(src);
-  const [errored, setErrored] = useState(false);
+  // Determine initial strategy based on URL type
+  const isBase64 = isDataUrl(src);
+  const resolved = resolveImageSrc(src);
 
-  useEffect(() => { setErrored(false); }, [proxied]);
+  type ImgState = "base64" | "proxied" | "direct" | "error";
+  const initialState: ImgState = isBase64 ? "base64" : "proxied";
+  const [state, setState] = useState<ImgState>(initialState);
 
-  if (!proxied || errored) return <>{fallback}</>;
+  // Reset state when src changes
+  useEffect(() => {
+    if (!src) { setState("error"); return; }
+    setState(isDataUrl(src) ? "base64" : "proxied");
+  }, [src]);
 
+  const handleProxyError = () => {
+    // Proxy failed — try the raw URL directly
+    if (src && src !== resolved) {
+      setState("direct");
+    } else {
+      setState("error");
+    }
+  };
+
+  if (!src || state === "error") return <>{fallback}</>;
+
+  // Base64 data URLs: render directly, no proxy, no CORS
+  if (state === "base64") {
+    return (
+      <img
+        src={src}
+        alt={alt}
+        className={className}
+        onError={() => setState("error")}
+      />
+    );
+  }
+
+  // Direct fallback for remote URLs when proxy fails
+  if (state === "direct") {
+    return (
+      <img
+        src={src}
+        alt={alt}
+        className={className}
+        onError={() => setState("error")}
+        crossOrigin="anonymous"
+      />
+    );
+  }
+
+  // Default: proxied remote URL
   return (
     <img
-      src={proxied}
+      src={resolved}
       alt={alt}
       className={className}
-      onError={() => setErrored(true)}
+      onError={handleProxyError}
     />
   );
 }
@@ -262,19 +360,105 @@ const EmptyState = ({ active }: { active: string }) => (
   </div>
 );
 
-// ─── Live URL badge ───────────────────────────────────────────────────────────
-const LiveUrlBadge = ({ url, style }: { url: string; style: CategoryStyle }) => (
-  <a
-    href={url}
-    target="_blank"
-    rel="noopener noreferrer"
-    onClick={e => e.stopPropagation()}
-    className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full ${style.bg} ${style.accent} font-mono text-xs hover:underline mt-1.5`}
-    title="Open live site"
-  >
-    <Globe size={10} /> Live
-  </a>
-);
+
+// ─── Supabase full-project fetcher ───────────────────────────────────────────
+// TWO-PHASE approach to avoid Supabase response-size truncation on base64 images.
+//
+// Phase 1 — joined query for all small/text data (projects + links + meta).
+//           project_images is intentionally EXCLUDED here because base64
+//           image_url values can be 100–200 KB each; including them in a
+//           joined response causes PostgREST to silently truncate or drop rows.
+//
+// Phase 2 — a single flat query on project_images for ALL project ids at once,
+//           then group client-side. One extra round-trip, full fidelity.
+async function fetchAllProjectsFromSupabase(): Promise<Project[]> {
+
+  // ── Phase 1: projects + links + meta (NO images in join) ─────────────────
+  const { data: projs, error } = await supabase
+    .from("projects")
+    .select(
+      "*, project_links(label,url,link_type,display_order), " +
+      "software_meta(tech_stack,live_url,repo_url,lighthouse_score,page_load_ms,monthly_visitors,uptime,analytics_note), " +
+      "art_meta(medium,dimensions,year,is_available,price,shop_url), " +
+      "design_meta(software,client_name,year,behance_url)"
+    )
+    .order("display_order");
+
+  if (error) throw new Error(error.message);
+  if (!projs?.length) return [];
+
+  const projectIds = (projs as SupabaseProject[]).map(p => p.id);
+
+  // ── Phase 2: fetch all images in one flat query, group by project_id ─────
+  // Fetching images separately avoids the joined-response size cap that causes
+  // base64 strings (100-200 KB each) to be truncated or silently dropped.
+  const { data: allImages, error: imgErr } = await supabase
+    .from("project_images")
+    .select("project_id, image_url, display_order")
+    .in("project_id", projectIds)
+    .order("display_order");
+
+  if (imgErr) {
+    console.warn("[Portfolio] Could not fetch images:", imgErr.message);
+  }
+
+  // Group images by project_id for O(1) lookup when building project objects
+  const imagesByProject: Record<string, string[]> = {};
+  for (const img of (allImages ?? []) as (SupabaseImage & { project_id: string })[]) {
+    if (!img.image_url) continue;
+    if (!imagesByProject[img.project_id]) imagesByProject[img.project_id] = [];
+    imagesByProject[img.project_id].push(img.image_url);
+  }
+
+  return (projs as (SupabaseProject & {
+    project_links:  SupabaseLink[];
+    software_meta:  SupabaseSoftwareMeta | null;
+    art_meta:       SupabaseArtMeta | null;
+    design_meta:    SupabaseDesignMeta | null;
+  })[]).map(p => {
+    // Images come from Phase 2 grouping — already ordered by display_order
+    const images = imagesByProject[p.id] ?? [];
+
+    const links = (p.project_links ?? [])
+      .sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0))
+      .map(l => ({ label: l.label, url: l.url, link_type: l.link_type }));
+
+    return {
+      id:          p.id,
+      title:       p.title,
+      category:    normalizeCategory(p.category),
+      description: p.description ?? "",
+      tags:        p.tags ?? [],
+      featured:    p.featured ?? false,
+      images,
+      links,
+      softwareMeta: p.software_meta ? {
+        tech_stack:       p.software_meta.tech_stack       ?? [],
+        live_url:         p.software_meta.live_url,
+        repo_url:         p.software_meta.repo_url,
+        lighthouse_score: p.software_meta.lighthouse_score,
+        page_load_ms:     p.software_meta.page_load_ms,
+        monthly_visitors: p.software_meta.monthly_visitors,
+        uptime:           p.software_meta.uptime,
+        analytics_note:   p.software_meta.analytics_note,
+      } : undefined,
+      artMeta: p.art_meta ? {
+        medium:       p.art_meta.medium,
+        dimensions:   p.art_meta.dimensions,
+        year:         p.art_meta.year,
+        is_available: p.art_meta.is_available,
+        price:        p.art_meta.price,
+        shop_url:     p.art_meta.shop_url,
+      } : undefined,
+      designMeta: p.design_meta ? {
+        software:    p.design_meta.software   ?? [],
+        client_name: p.design_meta.client_name,
+        year:        p.design_meta.year,
+        behance_url: p.design_meta.behance_url,
+      } : undefined,
+    };
+  });
+}
 
 // ─── Main Portfolio ───────────────────────────────────────────────────────────
 const Portfolio = () => {
@@ -282,45 +466,36 @@ const Portfolio = () => {
   const [lightbox, setLightbox] = useState<{ projectIdx: number; imageIdx: number } | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading,  setLoading]  = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
       setLoading(true);
+      setLoadError(null);
 
+      // ── Strategy 1: Express backend ──────────────────────────────────────
       try {
-        const res = await fetch(`${API}/projects`);
+        const res = await fetch(`${API_BASE}/projects`);
         if (res.ok) {
           const raw: RawProject[] = await res.json();
-          const normalised = raw.map(normalizeProject);
-          setProjects(normalised);
+          setProjects(raw.map(normalizeProject));
           setLoading(false);
           return;
         }
-      } catch (_) { /* fall through to Supabase */ }
-
-      try {
-        const { data: projs } = await supabase.from("projects").select("*").order("display_order");
-        if (!projs?.length) { setProjects([]); setLoading(false); return; }
-
-        const full: Project[] = await Promise.all(
-          (projs as SupabaseProject[]).map(async (p) => {
-            const [{ data: imgs }, { data: lnks }] = await Promise.all([
-              supabase.from("project_images").select("*").eq("project_id", p.id).order("display_order"),
-              supabase.from("project_links") .select("*").eq("project_id", p.id).order("display_order"),
-            ]);
-            return {
-              id:          p.id,
-              title:       p.title,
-              category:    normalizeCategory(p.category),
-              description: p.description ?? "",
-              tags:        p.tags ?? [],
-              images:      ((imgs ?? []) as SupabaseImage[]).map(i => i.image_url).filter(Boolean),
-              links:       ((lnks ?? []) as SupabaseLink[]) .map(l => ({ label: l.label, url: l.url, link_type: l.link_type })),
-            };
-          })
-        );
-        setProjects(full);
       } catch (_) {
+        // Backend unreachable — fall through to Supabase
+      }
+
+      // ── Strategy 2: Direct Supabase with joined query ────────────────────
+      // This single query fetches everything in one round-trip, including
+      // the full image_url values (base64 or remote) without truncation.
+      try {
+        const result = await fetchAllProjectsFromSupabase();
+        setProjects(result);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "Failed to load projects";
+        console.error("[Portfolio] Supabase fetch error:", err);
+        setLoadError(msg);
         setProjects([]);
       } finally {
         setLoading(false);
@@ -339,6 +514,18 @@ const Portfolio = () => {
       setLightbox({ ...lightbox, imageIdx: next });
   }, [lightbox, currentProject]);
 
+  // Keyboard navigation for lightbox
+  useEffect(() => {
+    if (!lightbox) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "ArrowLeft")  navigateImage(-1);
+      if (e.key === "ArrowRight") navigateImage(1);
+      if (e.key === "Escape")     setLightbox(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [lightbox, navigateImage]);
+
   const getSpan = (project: Project, i: number) => {
     if (project.featured && i === 0) return "md:col-span-8";
     if (project.featured && i === 1 && filtered[0]?.featured) return "md:col-span-4";
@@ -352,14 +539,13 @@ const Portfolio = () => {
         subtitle="A curated selection of projects spanning web development, graphic design, and fine art."
       />
 
-      {/* ↓ Reduced from py-20 → py-10 */}
       <section className="py-10">
         <div className="container mx-auto px-4">
           <div className="text-center mb-3">
             <span className="text-muted-foreground font-mono text-xs tracking-widest uppercase">Selected Work</span>
           </div>
 
-          {/* Filters — reduced gap & mb */}
+          {/* Filters */}
           <div className="flex justify-center gap-1.5 mb-8 flex-wrap">
             {filters.map(f => {
               const style = categoryStyles[f];
@@ -385,6 +571,13 @@ const Portfolio = () => {
                 <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest">Loading projects…</p>
               </div>
             </div>
+          ) : loadError ? (
+            <div className="flex items-center justify-center py-16">
+              <div className="text-center">
+                <p className="text-destructive font-mono text-sm mb-2">Failed to load projects</p>
+                <p className="text-muted-foreground font-body text-xs">{loadError}</p>
+              </div>
+            </div>
           ) : (
             <div className="grid grid-cols-12 gap-4 max-w-6xl mx-auto">
               <AnimatePresence mode="popLayout">
@@ -406,16 +599,22 @@ const Portfolio = () => {
                         className="aspect-[16/10] overflow-hidden cursor-pointer relative"
                         onClick={() => setLightbox({ projectIdx: i, imageIdx: 0 })}
                       >
-                        <SafeImage
-                          src={firstImg}
-                          alt={project.title}
-                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                          fallback={
-                            <div className={`w-full h-full ${style.bg} flex items-center justify-center`}>
-                              <Icon size={48} className={`${style.accent} opacity-30`} />
-                            </div>
-                          }
-                        />
+                        {firstImg ? (
+                          <SafeImage
+                            src={firstImg}
+                            alt={project.title}
+                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                            fallback={
+                              <div className={`w-full h-full ${style.bg} flex items-center justify-center`}>
+                                <Icon size={48} className={`${style.accent} opacity-30`} />
+                              </div>
+                            }
+                          />
+                        ) : (
+                          <div className={`w-full h-full ${style.bg} flex items-center justify-center`}>
+                            <Icon size={48} className={`${style.accent} opacity-30`} />
+                          </div>
+                        )}
 
                         {project.images.length > 1 && (
                           <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded-lg bg-background/70 backdrop-blur-sm font-mono text-xs text-foreground">
@@ -455,9 +654,9 @@ const Portfolio = () => {
                         </div>
                       </div>
 
-                      {/* Card footer — reduced from p-4 → p-3 */}
+                      {/* Card footer */}
                       <div className="p-3 border-t border-border">
-                        <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-start justify-between gap-2 mb-2">
                           <div className="min-w-0 flex-1">
                             <span className={`${style.accent} font-mono text-xs uppercase`}>{project.category}</span>
                             <h3 className="font-display font-semibold text-foreground text-sm mt-0.5 truncate">{project.title}</h3>
@@ -466,21 +665,37 @@ const Portfolio = () => {
                             {project.category === "Fine Art"    && project.artMeta      && <ArtBadges         meta={project.artMeta}      />}
                             {project.category === "Design"      && project.designMeta   && <DesignBadges      meta={project.designMeta}   />}
                             {project.category === "Photography" && project.designMeta   && <PhotographyBadges meta={project.designMeta}   />}
-
-                            {liveUrl && <LiveUrlBadge url={liveUrl} style={style} />}
                           </div>
 
+                          {/* Icon-only link buttons (repo, demo, etc.) */}
                           <div className="flex items-center gap-1 flex-shrink-0 mt-1">
-                            {project.links.slice(0, 3).map((link, li) => (
-                              <a key={li} href={link.url} target="_blank" rel="noopener noreferrer"
-                                onClick={e => e.stopPropagation()}
-                                className={`p-1.5 rounded-lg ${style.bg} ${style.accent} hover:scale-110 transition-transform`}
-                                title={link.label}>
-                                {linkIcon(link.link_type)}
-                              </a>
-                            ))}
+                            {project.links
+                              .filter(l => l.link_type !== "live" && l.link_type !== "demo")
+                              .slice(0, 2)
+                              .map((link, li) => (
+                                <a key={li} href={link.url} target="_blank" rel="noopener noreferrer"
+                                  onClick={e => e.stopPropagation()}
+                                  className={`p-1.5 rounded-lg ${style.bg} ${style.accent} hover:scale-110 transition-transform`}
+                                  title={link.label}>
+                                  {linkIcon(link.link_type)}
+                                </a>
+                              ))}
                           </div>
                         </div>
+
+                        {/* Prominent live site / primary CTA button */}
+                        {liveUrl && (
+                          <a
+                            href={liveUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={e => e.stopPropagation()}
+                            className={`w-full flex items-center justify-center gap-1.5 py-2 rounded-xl font-mono text-xs uppercase tracking-wider border transition-all hover:scale-[1.02] active:scale-[0.98] ${style.bg} ${style.accent} ${style.border} hover:brightness-125`}
+                          >
+                            <ArrowUpRight size={12} />
+                            {resolvePrimaryLinkLabel(project, liveUrl)}
+                          </a>
+                        )}
                       </div>
                     </motion.div>
                   );
@@ -515,7 +730,9 @@ const Portfolio = () => {
                 <div className="md:w-3/5 flex-shrink-0 relative bg-background/50">
                   {currentProject.images.length > 0 ? (
                     <AnimatePresence mode="wait">
-                      <motion.div key={lightbox.imageIdx} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
+                      <motion.div key={lightbox.imageIdx} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}
+                        className="w-full h-full"
+                      >
                         <SafeImage
                           src={currentProject.images[lightbox.imageIdx]}
                           alt={`${currentProject.title} ${lightbox.imageIdx + 1}`}
@@ -557,7 +774,7 @@ const Portfolio = () => {
                   )}
                 </div>
 
-                {/* Info side — reduced from p-6 md:p-8 → p-4 md:p-5 */}
+                {/* Info side */}
                 <div className="p-4 md:p-5 flex flex-col justify-between md:w-2/5 overflow-y-auto">
                   <div>
                     <div className="flex items-center gap-2 mb-1">
@@ -620,7 +837,7 @@ const Portfolio = () => {
                     </div>
                   </div>
 
-                  {/* Links — reduced from py-3 → py-2 */}
+                  {/* Links */}
                   <div className="flex flex-col gap-1.5">
                     {currentProject.links.map((link, li) => (
                       <a key={li} href={link.url} target="_blank" rel="noopener noreferrer"

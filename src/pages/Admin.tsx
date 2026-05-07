@@ -37,10 +37,57 @@ function getApiUrl(): string {
 }
 const API_URL = getApiUrl();
 
+// ── Image proxy helper (mirrors Portfolio.tsx) ────────────────────────────────
+function proxyUrl(src: string): string {
+  if (!src || !src.trim()) return "";
+  const trimmed = src.trim();
+  if (trimmed.startsWith("data:") || trimmed.startsWith("blob:")) return trimmed;
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+    return `${API_URL}/image-proxy?url=${encodeURIComponent(trimmed)}`;
+  }
+  return trimmed;
+}
+
+// ── Proxied thumbnail — with fallback ─────────────────────────────────────────
+function ProxiedThumbnail({
+  src,
+  alt,
+  fallback,
+}: {
+  src: string;
+  alt: string;
+  fallback: React.ReactNode;
+}) {
+  const proxied = proxyUrl(src);
+  const [state, setState] = useState<"proxied" | "direct" | "error">("proxied");
+
+  useEffect(() => { setState("proxied"); }, [proxied]);
+
+  if (!src || state === "error") return <>{fallback}</>;
+
+  if (state === "direct") {
+    return (
+      <img
+        src={src}
+        alt={alt}
+        className="w-16 h-12 object-cover rounded-xl flex-shrink-0"
+        onError={() => setState("error")}
+        crossOrigin="anonymous"
+      />
+    );
+  }
+
+  return (
+    <img
+      src={proxied}
+      alt={alt}
+      className="w-16 h-12 object-cover rounded-xl flex-shrink-0"
+      onError={() => setState("direct")}
+    />
+  );
+}
+
 // ── Category ↔ Prisma enum key mappings ───────────────────────────────────────
-// Prisma schema Category enum keys: WEB_DEV, DESIGN, FINE_ART, PHOTOGRAPHY
-// UI display labels:               "Web Dev", "Design", "Fine Art", "Photography"
-// We send the enum KEY to Prisma, and display the label in the UI.
 const CATEGORY_TO_PRISMA: Record<Category, string> = {
   "Web Dev":     "WEB_DEV",
   "Design":      "DESIGN",
@@ -48,14 +95,11 @@ const CATEGORY_TO_PRISMA: Record<Category, string> = {
   "Photography": "PHOTOGRAPHY",
 };
 
-// Handles both Prisma enum keys AND the @map display values that some serializers return
 const PRISMA_TO_CATEGORY: Record<string, Category> = {
-  // Prisma enum keys
   "WEB_DEV":     "Web Dev",
   "DESIGN":      "Design",
   "FINE_ART":    "Fine Art",
   "PHOTOGRAPHY": "Photography",
-  // @map display values (in case API returns mapped strings)
   "Web Dev":     "Web Dev",
   "Design":      "Design",
   "Fine Art":    "Fine Art",
@@ -66,7 +110,6 @@ interface CategoryStyleEntry {
   accent: string; bg: string; border: string; icon: ElementType;
 }
 
-// Style map handles both UI labels and raw Prisma keys
 const categoryStyle: Record<string, CategoryStyleEntry> = {
   "Web Dev":     { accent: "text-amber-400",  bg: "bg-amber-500/10",  border: "border-amber-500/30",  icon: Code },
   "Design":      { accent: "text-cyan-400",   bg: "bg-cyan-500/10",   border: "border-cyan-500/30",   icon: Palette },
@@ -78,7 +121,6 @@ const categoryStyle: Record<string, CategoryStyleEntry> = {
   "PHOTOGRAPHY": { accent: "text-violet-400", bg: "bg-violet-500/10", border: "border-violet-500/30", icon: Camera },
 };
 
-// Get the human-readable display label for any category string
 function displayCategory(cat: string): string {
   return PRISMA_TO_CATEGORY[cat] ?? cat;
 }
@@ -91,7 +133,6 @@ interface ApiProject {
   featured?: boolean;
   displayOrder?: number;
   tags?: string[];
-  // Support both camelCase (frontend) and snake_case (API response)
   images?: {
     imageUrl?: string;
     image_url?: string;
@@ -110,12 +151,10 @@ interface ApiProject {
 }
 type InitialProject = ApiProject;
 
-// ── Helper: resolve image URL — handles camelCase and snake_case ──────────────
 function resolveImageUrl(img?: ApiProject["images"][0]): string {
   return img?.imageUrl ?? img?.image_url ?? "";
 }
 
-// ── Helper: resolve live URL from softwareMeta or links array ─────────────────
 function resolveLiveUrl(project: ApiProject): string | undefined {
   if (project.softwareMeta?.liveUrl) return project.softwareMeta.liveUrl;
   const liveLink = project.links?.find(
@@ -124,9 +163,6 @@ function resolveLiveUrl(project: ApiProject): string | undefined {
   return liveLink?.url;
 }
 
-// ── Split helper ──────────────────────────────────────────────────────────────
-// Splits any array of strings that may contain joined values (comma, semicolon,
-// middle-dot ·, or newline separated). Handles pasted clipboard content.
 function splitTagString(tags: string[]): string[] {
   return tags.flatMap((t) =>
     t.split(/[·,;\n]+/).map((s) => s.trim()).filter(Boolean)
@@ -347,12 +383,16 @@ function ImageManager({
     <div className="space-y-3">
       {value.map((img, i) => (
         <div key={i} className="flex items-center gap-2 p-2 bg-secondary rounded-xl border border-border">
+          {/* Use ProxiedThumbnail in the form preview too */}
           {img.imageUrl && (
-            <img
+            <ProxiedThumbnail
               src={img.imageUrl}
-              alt={img.altText}
-              className="w-16 h-12 object-cover rounded-lg flex-shrink-0"
-              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+              alt={img.altText || ""}
+              fallback={
+                <div className="w-16 h-12 rounded-xl bg-secondary flex items-center justify-center flex-shrink-0">
+                  <Image size={16} className="text-muted-foreground opacity-40" />
+                </div>
+              }
             />
           )}
           <div className="flex-1 min-w-0">
@@ -514,7 +554,6 @@ function ProjectModal({
   onSave: (data: ProjectFormData, id?: string) => Promise<void>;
   session: { access_token: string } | null;
 }) {
-  // Normalize category from API (may be Prisma key or mapped display value) → UI label
   const resolveCategory = (raw: string): Category =>
     PRISMA_TO_CATEGORY[raw] ?? ("Web Dev" as Category);
 
@@ -569,16 +608,12 @@ function ProjectModal({
     setBuildLogs([]);
     setShowBuildLogs(true);
 
-    // ── KEY FIX: convert UI display label → Prisma enum key before sending ──
-    // "Web Dev" → "WEB_DEV", "Photography" → "PHOTOGRAPHY", etc.
     const uiCategory = form.category as unknown as Category;
     const prismaCategory = CATEGORY_TO_PRISMA[uiCategory] ?? uiCategory;
 
     const sanitizedForm: typeof form = {
       ...form,
-      // Send Prisma enum key to the backend
       category: prismaCategory as unknown as ProjectFormData["category"],
-      // Split any tags that were entered as a single joined string
       tags: splitTagString(form.tags),
       softwareMeta: form.softwareMeta
         ? { ...form.softwareMeta, techStack: splitTagString(form.softwareMeta.techStack ?? []) }
@@ -591,13 +626,6 @@ function ProjectModal({
     addBuildLog(`Saving: "${sanitizedForm.title}" — category → "${prismaCategory}"`);
     addBuildLog(`Tags (${sanitizedForm.tags.length}): ${sanitizedForm.tags.join(", ") || "none"}`);
     addBuildLog(`Images: ${sanitizedForm.images.length} | Links: ${sanitizedForm.links.length}`);
-    if (prismaCategory === "WEB_DEV") {
-      addBuildLog(`Tech stack (${sanitizedForm.softwareMeta?.techStack?.length ?? 0}): ${sanitizedForm.softwareMeta?.techStack?.join(", ") || "none"}`);
-    }
-    if (prismaCategory === "PHOTOGRAPHY" || prismaCategory === "DESIGN") {
-      addBuildLog(`Equipment/Software (${sanitizedForm.designMeta?.software?.length ?? 0}): ${sanitizedForm.designMeta?.software?.join(", ") || "none"}`);
-    }
-    addBuildLog(`Sending ${initial?.id ? "PUT" : "POST"} to ${API_URL}/projects${initial?.id ? `/${initial.id}` : ""}…`);
 
     try {
       await onSave(sanitizedForm as unknown as ProjectFormData, initial?.id);
@@ -801,7 +829,6 @@ function ProjectModal({
                   <Field label="Print Shop / Gallery URL">
                     <input value={form.designMeta?.behanceUrl ?? ""} onChange={(e) => setDes("behanceUrl", e.target.value)} placeholder="https://…" className={inputCls} />
                   </Field>
-                  {/* Camera / equipment — press Enter after EACH item */}
                   <Field label="Camera / Equipment — press Enter after each item" className="col-span-2">
                     <TagInput
                       value={form.designMeta?.software ?? []}
@@ -962,7 +989,6 @@ const Admin = () => {
 
   const allCategories = ["All", ...CATEGORIES];
 
-  // Normalise category before filtering so both Prisma keys and display labels match
   const getDisplayCat = (p: ApiProject) => PRISMA_TO_CATEGORY[p.category] ?? p.category;
   const filtered = filter === "All" ? projects : projects.filter((p) => getDisplayCat(p) === filter);
 
@@ -1063,24 +1089,16 @@ const Admin = () => {
                     transition={{ delay: i * 0.03 }}
                     className={`flex items-center gap-4 p-4 bg-card border ${style.border} rounded-2xl hover:shadow-md transition-all`}
                   >
-                    {/* Thumbnail — shows uploaded image or category icon fallback */}
-                    {firstImageUrl ? (
-                      <img
-                        src={firstImageUrl}
-                        alt={project.title}
-                        className="w-16 h-12 object-cover rounded-xl flex-shrink-0"
-                        onError={(e) => {
-                          const el = e.target as HTMLImageElement;
-                          el.style.display = "none";
-                          const placeholder = el.nextElementSibling as HTMLElement | null;
-                          if (placeholder) placeholder.style.display = "flex";
-                        }}
-                      />
-                    ) : null}
-                    {/* Icon placeholder — visible when no image or image fails */}
-                    <div className={`w-16 h-12 ${style.bg} rounded-xl items-center justify-center flex-shrink-0 ${firstImageUrl ? "hidden" : "flex"}`}>
-                      <Icon size={20} className={`${style.accent} opacity-50`} />
-                    </div>
+                    {/* Thumbnail — now uses proxy to bypass CORP restrictions */}
+                    <ProxiedThumbnail
+                      src={firstImageUrl}
+                      alt={project.title}
+                      fallback={
+                        <div className={`w-16 h-12 ${style.bg} rounded-xl flex items-center justify-center flex-shrink-0`}>
+                          <Icon size={20} className={`${style.accent} opacity-50`} />
+                        </div>
+                      }
+                    />
 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
@@ -1096,7 +1114,6 @@ const Admin = () => {
                         {project.images?.length ?? 0} img · {project.links?.length ?? 0} links
                       </span>
 
-                      {/* Live URL button — opens project in new tab */}
                       {liveUrl && (
                         <a
                           href={liveUrl}
