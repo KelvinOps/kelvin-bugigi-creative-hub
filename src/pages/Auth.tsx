@@ -405,18 +405,6 @@ const Auth = () => {
             )}
           </AnimatePresence>
 
-          {isLogin && (
-            <p className="text-center text-sm text-muted-foreground mt-4">
-              Don't have an account?{" "}
-              <button
-                type="button"
-                onClick={() => setIsLogin(false)}
-                className="text-primary hover:text-primary/80 font-medium transition-colors"
-              >
-                Register
-              </button>
-            </p>
-          )}
         </div>
 
         <p className="text-center text-muted-foreground/40 font-mono text-[10px] mt-6 tracking-wider">

@@ -569,11 +569,11 @@ const Index = () => {
               animate={{ opacity: 1, scale: 1, rotateY: 0 }}
               transition={{ duration: 1.0, delay: 2.0, ease: [0.22, 1, 0.36, 1] }}
               style={{ y: springPortraitY, scale: portraitScale }}
-              className="relative hidden lg:flex justify-center"
+              className="relative flex justify-center mt-10 lg:mt-0"
             >
               <div className="relative">
                 {/* Rotating rings */}
-                <div className="absolute inset-0 -m-10 pointer-events-none">
+                <div className="absolute inset-0 -m-6 sm:-m-8 lg:-m-10 pointer-events-none">
                   <motion.div
                     className="absolute inset-0 rounded-full border border-primary/10"
                     style={{ borderStyle: "dashed" }}
@@ -581,7 +581,7 @@ const Index = () => {
                     transition={{ duration: 22, repeat: Infinity, ease: "linear" }}
                   />
                   <motion.div
-                    className="absolute inset-7 rounded-full border border-primary/5"
+                    className="absolute inset-5 sm:inset-6 lg:inset-7 rounded-full border border-primary/5"
                     style={{ borderStyle: "dotted" }}
                     animate={{ rotate: -360 }}
                     transition={{ duration: 35, repeat: Infinity, ease: "linear" }}
@@ -589,35 +589,39 @@ const Index = () => {
                 </div>
 
                 {/* Corner accents */}
-                {["-top-4 -left-4 border-t-2 border-l-2 rounded-tl-2xl", "-bottom-4 -right-4 border-b-2 border-r-2 rounded-br-2xl"].map(
+                {["-top-3 -left-3 border-t-2 border-l-2 rounded-tl-full", "-bottom-3 -right-3 border-b-2 border-r-2 rounded-br-full"].map(
                   (cls, i) => (
                     <motion.div
                       key={i}
-                      className={`absolute w-12 h-12 border-primary/${i === 0 ? "55" : "30"} ${cls}`}
+                      className={`absolute w-10 h-10 sm:w-12 sm:h-12 border-primary/${i === 0 ? "55" : "30"} ${cls}`}
                       animate={{ opacity: [0.4, 1, 0.4] }}
                       transition={{ duration: 2.5, delay: i * 1.2, repeat: Infinity }}
                     />
                   )
                 )}
 
-                {/* Portrait */}
-                <div className="w-[360px] h-[440px] rounded-[1.75rem] overflow-hidden pulse-glow relative">
-                  <img src={heroPortrait} alt="Kelvin Bugigi" className="w-full h-full object-cover" />
+                {/* Portrait — circular, responsive, always visible */}
+                <div className="w-56 h-56 sm:w-72 sm:h-72 md:w-80 md:h-80 lg:w-[380px] lg:h-[380px] rounded-full overflow-hidden pulse-glow relative border-2 border-primary/20 shrink-0 mx-auto">
+                  <img
+                    src={heroPortrait}
+                    alt="Kelvin Bugigi"
+                    className="w-full h-full object-cover"
+                  />
                   <div
                     className="absolute inset-0"
-                    style={{ background: "linear-gradient(to top, hsl(222 28% 8% / 0.45) 0%, transparent 55%)" }}
+                    style={{ background: "linear-gradient(to top, hsl(222 28% 8% / 0.35) 0%, transparent 55%)" }}
                   />
                 </div>
 
-                {/* Floating badges */}
+                {/* Floating badges — hidden on small screens to avoid overlap/clipping */}
                 {[
-                  { icon: Sparkles, label: "Next.js", pos: "-left-18 top-12", color: "text-primary border-primary/30", dir: -7 },
-                  { icon: Palette, label: "Blender 3D", pos: "-right-16 top-1/3", color: "text-cyan-400 border-cyan-500/30", dir: 8 },
-                  { icon: PenTool, label: "Fine Art", pos: "-left-12 bottom-16", color: "text-rose-400 border-rose-500/30", dir: -6 },
+                  { icon: Sparkles, label: "Next.js", pos: "-left-4 top-6 sm:-left-14 sm:top-10 lg:-left-18 lg:top-12", color: "text-primary border-primary/30", dir: -7 },
+                  { icon: Palette, label: "Blender 3D", pos: "-right-4 top-1/3 sm:-right-12 lg:-right-16", color: "text-cyan-400 border-cyan-500/30", dir: 8 },
+                  { icon: PenTool, label: "Fine Art", pos: "-left-4 bottom-10 sm:-left-10 sm:bottom-14 lg:-left-12 lg:bottom-16", color: "text-rose-400 border-rose-500/30", dir: -6 },
                 ].map((badge, i) => (
                   <motion.div
                     key={badge.label}
-                    className={`absolute ${badge.pos} flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-card/90 backdrop-blur-md border ${badge.color} font-mono text-[10px] shadow-xl`}
+                    className={`hidden sm:flex absolute ${badge.pos} items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-card/90 backdrop-blur-md border ${badge.color} font-mono text-[10px] shadow-xl`}
                     animate={{ y: [0, badge.dir, 0] }}
                     transition={{ duration: 3 + i * 0.5, delay: i * 0.8, repeat: Infinity, ease: "easeInOut" }}
                   >
