@@ -1,3 +1,5 @@
+// src/components/Navbar.tsx
+
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Menu, X, LogIn, LogOut, Shield } from "lucide-react";
@@ -18,7 +20,7 @@ const Navbar = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const location  = useLocation();
   const navigate  = useNavigate();
-  const { user, isAdmin, signOut, loading } = useAuth();
+  const { user, isAdmin, logout, loading } = useAuth(); // ← was "signOut", now "logout"
 
   useEffect(() => {
     const handler = () => setScrolled(window.scrollY > 60);
@@ -28,7 +30,7 @@ const Navbar = () => {
 
   useEffect(() => setMobileOpen(false), [location.pathname]);
 
-  const handleSignOut = async () => { await signOut(); navigate("/"); };
+  const handleSignOut = async () => { await logout(); navigate("/"); }; // ← was "signOut()"
 
   const renderAuthDesktop = () => {
     if (loading) return <div className="w-20 h-8 rounded-full bg-border/30 animate-pulse" />;

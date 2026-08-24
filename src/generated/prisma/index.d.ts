@@ -34,6 +34,11 @@ export type ProjectImage = $Result.DefaultSelection<Prisma.$ProjectImagePayload>
  */
 export type ProjectLink = $Result.DefaultSelection<Prisma.$ProjectLinkPayload>
 /**
+ * Model ProjectVideo
+ * 
+ */
+export type ProjectVideo = $Result.DefaultSelection<Prisma.$ProjectVideoPayload>
+/**
  * Model SoftwareMeta
  * 
  */
@@ -81,20 +86,6 @@ export const LinkType: {
 
 export type LinkType = (typeof LinkType)[keyof typeof LinkType]
 
-
-export const ArtMedium: {
-  PENCIL: 'PENCIL',
-  GRAPHITE: 'GRAPHITE',
-  BALLPOINT: 'BALLPOINT',
-  OIL: 'OIL',
-  ACRYLIC: 'ACRYLIC',
-  WATERCOLOR: 'WATERCOLOR',
-  MIXED_MEDIA: 'MIXED_MEDIA',
-  OTHER: 'OTHER'
-};
-
-export type ArtMedium = (typeof ArtMedium)[keyof typeof ArtMedium]
-
 }
 
 export type Role = $Enums.Role
@@ -108,10 +99,6 @@ export const Category: typeof $Enums.Category
 export type LinkType = $Enums.LinkType
 
 export const LinkType: typeof $Enums.LinkType
-
-export type ArtMedium = $Enums.ArtMedium
-
-export const ArtMedium: typeof $Enums.ArtMedium
 
 /**
  * ##  Prisma Client ʲˢ
@@ -269,6 +256,16 @@ export class PrismaClient<
     * ```
     */
   get projectLink(): Prisma.ProjectLinkDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.projectVideo`: Exposes CRUD operations for the **ProjectVideo** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more ProjectVideos
+    * const projectVideos = await prisma.projectVideo.findMany()
+    * ```
+    */
+  get projectVideo(): Prisma.ProjectVideoDelegate<ExtArgs, ClientOptions>;
 
   /**
    * `prisma.softwareMeta`: Exposes CRUD operations for the **SoftwareMeta** model.
@@ -737,6 +734,7 @@ export namespace Prisma {
     Project: 'Project',
     ProjectImage: 'ProjectImage',
     ProjectLink: 'ProjectLink',
+    ProjectVideo: 'ProjectVideo',
     SoftwareMeta: 'SoftwareMeta',
     ArtMeta: 'ArtMeta',
     DesignMeta: 'DesignMeta'
@@ -755,7 +753,7 @@ export namespace Prisma {
       omit: GlobalOmitOptions
     }
     meta: {
-      modelProps: "user" | "project" | "projectImage" | "projectLink" | "softwareMeta" | "artMeta" | "designMeta"
+      modelProps: "user" | "project" | "projectImage" | "projectLink" | "projectVideo" | "softwareMeta" | "artMeta" | "designMeta"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
@@ -1052,6 +1050,80 @@ export namespace Prisma {
           count: {
             args: Prisma.ProjectLinkCountArgs<ExtArgs>
             result: $Utils.Optional<ProjectLinkCountAggregateOutputType> | number
+          }
+        }
+      }
+      ProjectVideo: {
+        payload: Prisma.$ProjectVideoPayload<ExtArgs>
+        fields: Prisma.ProjectVideoFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.ProjectVideoFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ProjectVideoPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.ProjectVideoFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ProjectVideoPayload>
+          }
+          findFirst: {
+            args: Prisma.ProjectVideoFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ProjectVideoPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.ProjectVideoFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ProjectVideoPayload>
+          }
+          findMany: {
+            args: Prisma.ProjectVideoFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ProjectVideoPayload>[]
+          }
+          create: {
+            args: Prisma.ProjectVideoCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ProjectVideoPayload>
+          }
+          createMany: {
+            args: Prisma.ProjectVideoCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.ProjectVideoCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ProjectVideoPayload>[]
+          }
+          delete: {
+            args: Prisma.ProjectVideoDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ProjectVideoPayload>
+          }
+          update: {
+            args: Prisma.ProjectVideoUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ProjectVideoPayload>
+          }
+          deleteMany: {
+            args: Prisma.ProjectVideoDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.ProjectVideoUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateManyAndReturn: {
+            args: Prisma.ProjectVideoUpdateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ProjectVideoPayload>[]
+          }
+          upsert: {
+            args: Prisma.ProjectVideoUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ProjectVideoPayload>
+          }
+          aggregate: {
+            args: Prisma.ProjectVideoAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateProjectVideo>
+          }
+          groupBy: {
+            args: Prisma.ProjectVideoGroupByArgs<ExtArgs>
+            result: $Utils.Optional<ProjectVideoGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.ProjectVideoCountArgs<ExtArgs>
+            result: $Utils.Optional<ProjectVideoCountAggregateOutputType> | number
           }
         }
       }
@@ -1389,6 +1461,7 @@ export namespace Prisma {
     project?: ProjectOmit
     projectImage?: ProjectImageOmit
     projectLink?: ProjectLinkOmit
+    projectVideo?: ProjectVideoOmit
     softwareMeta?: SoftwareMetaOmit
     artMeta?: ArtMetaOmit
     designMeta?: DesignMetaOmit
@@ -1474,11 +1547,13 @@ export namespace Prisma {
   export type ProjectCountOutputType = {
     images: number
     links: number
+    videos: number
   }
 
   export type ProjectCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     images?: boolean | ProjectCountOutputTypeCountImagesArgs
     links?: boolean | ProjectCountOutputTypeCountLinksArgs
+    videos?: boolean | ProjectCountOutputTypeCountVideosArgs
   }
 
   // Custom InputTypes
@@ -1504,6 +1579,13 @@ export namespace Prisma {
    */
   export type ProjectCountOutputTypeCountLinksArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     where?: ProjectLinkWhereInput
+  }
+
+  /**
+   * ProjectCountOutputType without action
+   */
+  export type ProjectCountOutputTypeCountVideosArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: ProjectVideoWhereInput
   }
 
 
@@ -2734,6 +2816,7 @@ export namespace Prisma {
     updatedAt?: boolean
     images?: boolean | Project$imagesArgs<ExtArgs>
     links?: boolean | Project$linksArgs<ExtArgs>
+    videos?: boolean | Project$videosArgs<ExtArgs>
     softwareMeta?: boolean | Project$softwareMetaArgs<ExtArgs>
     artMeta?: boolean | Project$artMetaArgs<ExtArgs>
     designMeta?: boolean | Project$designMetaArgs<ExtArgs>
@@ -2780,6 +2863,7 @@ export namespace Prisma {
   export type ProjectInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     images?: boolean | Project$imagesArgs<ExtArgs>
     links?: boolean | Project$linksArgs<ExtArgs>
+    videos?: boolean | Project$videosArgs<ExtArgs>
     softwareMeta?: boolean | Project$softwareMetaArgs<ExtArgs>
     artMeta?: boolean | Project$artMetaArgs<ExtArgs>
     designMeta?: boolean | Project$designMetaArgs<ExtArgs>
@@ -2793,6 +2877,7 @@ export namespace Prisma {
     objects: {
       images: Prisma.$ProjectImagePayload<ExtArgs>[]
       links: Prisma.$ProjectLinkPayload<ExtArgs>[]
+      videos: Prisma.$ProjectVideoPayload<ExtArgs>[]
       softwareMeta: Prisma.$SoftwareMetaPayload<ExtArgs> | null
       artMeta: Prisma.$ArtMetaPayload<ExtArgs> | null
       designMeta: Prisma.$DesignMetaPayload<ExtArgs> | null
@@ -3203,6 +3288,7 @@ export namespace Prisma {
     readonly [Symbol.toStringTag]: "PrismaPromise"
     images<T extends Project$imagesArgs<ExtArgs> = {}>(args?: Subset<T, Project$imagesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ProjectImagePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     links<T extends Project$linksArgs<ExtArgs> = {}>(args?: Subset<T, Project$linksArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ProjectLinkPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    videos<T extends Project$videosArgs<ExtArgs> = {}>(args?: Subset<T, Project$videosArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ProjectVideoPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     softwareMeta<T extends Project$softwareMetaArgs<ExtArgs> = {}>(args?: Subset<T, Project$softwareMetaArgs<ExtArgs>>): Prisma__SoftwareMetaClient<$Result.GetResult<Prisma.$SoftwareMetaPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
     artMeta<T extends Project$artMetaArgs<ExtArgs> = {}>(args?: Subset<T, Project$artMetaArgs<ExtArgs>>): Prisma__ArtMetaClient<$Result.GetResult<Prisma.$ArtMetaPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
     designMeta<T extends Project$designMetaArgs<ExtArgs> = {}>(args?: Subset<T, Project$designMetaArgs<ExtArgs>>): Prisma__DesignMetaClient<$Result.GetResult<Prisma.$DesignMetaPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
@@ -3677,6 +3763,30 @@ export namespace Prisma {
     take?: number
     skip?: number
     distinct?: ProjectLinkScalarFieldEnum | ProjectLinkScalarFieldEnum[]
+  }
+
+  /**
+   * Project.videos
+   */
+  export type Project$videosArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ProjectVideo
+     */
+    select?: ProjectVideoSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ProjectVideo
+     */
+    omit?: ProjectVideoOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ProjectVideoInclude<ExtArgs> | null
+    where?: ProjectVideoWhereInput
+    orderBy?: ProjectVideoOrderByWithRelationInput | ProjectVideoOrderByWithRelationInput[]
+    cursor?: ProjectVideoWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: ProjectVideoScalarFieldEnum | ProjectVideoScalarFieldEnum[]
   }
 
   /**
@@ -5979,6 +6089,1124 @@ export namespace Prisma {
 
 
   /**
+   * Model ProjectVideo
+   */
+
+  export type AggregateProjectVideo = {
+    _count: ProjectVideoCountAggregateOutputType | null
+    _avg: ProjectVideoAvgAggregateOutputType | null
+    _sum: ProjectVideoSumAggregateOutputType | null
+    _min: ProjectVideoMinAggregateOutputType | null
+    _max: ProjectVideoMaxAggregateOutputType | null
+  }
+
+  export type ProjectVideoAvgAggregateOutputType = {
+    displayOrder: number | null
+  }
+
+  export type ProjectVideoSumAggregateOutputType = {
+    displayOrder: number | null
+  }
+
+  export type ProjectVideoMinAggregateOutputType = {
+    id: string | null
+    projectId: string | null
+    videoUrl: string | null
+    title: string | null
+    description: string | null
+    displayOrder: number | null
+    createdAt: Date | null
+  }
+
+  export type ProjectVideoMaxAggregateOutputType = {
+    id: string | null
+    projectId: string | null
+    videoUrl: string | null
+    title: string | null
+    description: string | null
+    displayOrder: number | null
+    createdAt: Date | null
+  }
+
+  export type ProjectVideoCountAggregateOutputType = {
+    id: number
+    projectId: number
+    videoUrl: number
+    title: number
+    description: number
+    displayOrder: number
+    createdAt: number
+    _all: number
+  }
+
+
+  export type ProjectVideoAvgAggregateInputType = {
+    displayOrder?: true
+  }
+
+  export type ProjectVideoSumAggregateInputType = {
+    displayOrder?: true
+  }
+
+  export type ProjectVideoMinAggregateInputType = {
+    id?: true
+    projectId?: true
+    videoUrl?: true
+    title?: true
+    description?: true
+    displayOrder?: true
+    createdAt?: true
+  }
+
+  export type ProjectVideoMaxAggregateInputType = {
+    id?: true
+    projectId?: true
+    videoUrl?: true
+    title?: true
+    description?: true
+    displayOrder?: true
+    createdAt?: true
+  }
+
+  export type ProjectVideoCountAggregateInputType = {
+    id?: true
+    projectId?: true
+    videoUrl?: true
+    title?: true
+    description?: true
+    displayOrder?: true
+    createdAt?: true
+    _all?: true
+  }
+
+  export type ProjectVideoAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which ProjectVideo to aggregate.
+     */
+    where?: ProjectVideoWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of ProjectVideos to fetch.
+     */
+    orderBy?: ProjectVideoOrderByWithRelationInput | ProjectVideoOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: ProjectVideoWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` ProjectVideos from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` ProjectVideos.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned ProjectVideos
+    **/
+    _count?: true | ProjectVideoCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to average
+    **/
+    _avg?: ProjectVideoAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: ProjectVideoSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: ProjectVideoMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: ProjectVideoMaxAggregateInputType
+  }
+
+  export type GetProjectVideoAggregateType<T extends ProjectVideoAggregateArgs> = {
+        [P in keyof T & keyof AggregateProjectVideo]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateProjectVideo[P]>
+      : GetScalarType<T[P], AggregateProjectVideo[P]>
+  }
+
+
+
+
+  export type ProjectVideoGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: ProjectVideoWhereInput
+    orderBy?: ProjectVideoOrderByWithAggregationInput | ProjectVideoOrderByWithAggregationInput[]
+    by: ProjectVideoScalarFieldEnum[] | ProjectVideoScalarFieldEnum
+    having?: ProjectVideoScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: ProjectVideoCountAggregateInputType | true
+    _avg?: ProjectVideoAvgAggregateInputType
+    _sum?: ProjectVideoSumAggregateInputType
+    _min?: ProjectVideoMinAggregateInputType
+    _max?: ProjectVideoMaxAggregateInputType
+  }
+
+  export type ProjectVideoGroupByOutputType = {
+    id: string
+    projectId: string
+    videoUrl: string
+    title: string | null
+    description: string | null
+    displayOrder: number
+    createdAt: Date
+    _count: ProjectVideoCountAggregateOutputType | null
+    _avg: ProjectVideoAvgAggregateOutputType | null
+    _sum: ProjectVideoSumAggregateOutputType | null
+    _min: ProjectVideoMinAggregateOutputType | null
+    _max: ProjectVideoMaxAggregateOutputType | null
+  }
+
+  type GetProjectVideoGroupByPayload<T extends ProjectVideoGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<ProjectVideoGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof ProjectVideoGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], ProjectVideoGroupByOutputType[P]>
+            : GetScalarType<T[P], ProjectVideoGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type ProjectVideoSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    projectId?: boolean
+    videoUrl?: boolean
+    title?: boolean
+    description?: boolean
+    displayOrder?: boolean
+    createdAt?: boolean
+    project?: boolean | ProjectDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["projectVideo"]>
+
+  export type ProjectVideoSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    projectId?: boolean
+    videoUrl?: boolean
+    title?: boolean
+    description?: boolean
+    displayOrder?: boolean
+    createdAt?: boolean
+    project?: boolean | ProjectDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["projectVideo"]>
+
+  export type ProjectVideoSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    projectId?: boolean
+    videoUrl?: boolean
+    title?: boolean
+    description?: boolean
+    displayOrder?: boolean
+    createdAt?: boolean
+    project?: boolean | ProjectDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["projectVideo"]>
+
+  export type ProjectVideoSelectScalar = {
+    id?: boolean
+    projectId?: boolean
+    videoUrl?: boolean
+    title?: boolean
+    description?: boolean
+    displayOrder?: boolean
+    createdAt?: boolean
+  }
+
+  export type ProjectVideoOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "projectId" | "videoUrl" | "title" | "description" | "displayOrder" | "createdAt", ExtArgs["result"]["projectVideo"]>
+  export type ProjectVideoInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    project?: boolean | ProjectDefaultArgs<ExtArgs>
+  }
+  export type ProjectVideoIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    project?: boolean | ProjectDefaultArgs<ExtArgs>
+  }
+  export type ProjectVideoIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    project?: boolean | ProjectDefaultArgs<ExtArgs>
+  }
+
+  export type $ProjectVideoPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "ProjectVideo"
+    objects: {
+      project: Prisma.$ProjectPayload<ExtArgs>
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      projectId: string
+      videoUrl: string
+      title: string | null
+      description: string | null
+      displayOrder: number
+      createdAt: Date
+    }, ExtArgs["result"]["projectVideo"]>
+    composites: {}
+  }
+
+  type ProjectVideoGetPayload<S extends boolean | null | undefined | ProjectVideoDefaultArgs> = $Result.GetResult<Prisma.$ProjectVideoPayload, S>
+
+  type ProjectVideoCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<ProjectVideoFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: ProjectVideoCountAggregateInputType | true
+    }
+
+  export interface ProjectVideoDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['ProjectVideo'], meta: { name: 'ProjectVideo' } }
+    /**
+     * Find zero or one ProjectVideo that matches the filter.
+     * @param {ProjectVideoFindUniqueArgs} args - Arguments to find a ProjectVideo
+     * @example
+     * // Get one ProjectVideo
+     * const projectVideo = await prisma.projectVideo.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends ProjectVideoFindUniqueArgs>(args: SelectSubset<T, ProjectVideoFindUniqueArgs<ExtArgs>>): Prisma__ProjectVideoClient<$Result.GetResult<Prisma.$ProjectVideoPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one ProjectVideo that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {ProjectVideoFindUniqueOrThrowArgs} args - Arguments to find a ProjectVideo
+     * @example
+     * // Get one ProjectVideo
+     * const projectVideo = await prisma.projectVideo.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends ProjectVideoFindUniqueOrThrowArgs>(args: SelectSubset<T, ProjectVideoFindUniqueOrThrowArgs<ExtArgs>>): Prisma__ProjectVideoClient<$Result.GetResult<Prisma.$ProjectVideoPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first ProjectVideo that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ProjectVideoFindFirstArgs} args - Arguments to find a ProjectVideo
+     * @example
+     * // Get one ProjectVideo
+     * const projectVideo = await prisma.projectVideo.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends ProjectVideoFindFirstArgs>(args?: SelectSubset<T, ProjectVideoFindFirstArgs<ExtArgs>>): Prisma__ProjectVideoClient<$Result.GetResult<Prisma.$ProjectVideoPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first ProjectVideo that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ProjectVideoFindFirstOrThrowArgs} args - Arguments to find a ProjectVideo
+     * @example
+     * // Get one ProjectVideo
+     * const projectVideo = await prisma.projectVideo.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends ProjectVideoFindFirstOrThrowArgs>(args?: SelectSubset<T, ProjectVideoFindFirstOrThrowArgs<ExtArgs>>): Prisma__ProjectVideoClient<$Result.GetResult<Prisma.$ProjectVideoPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more ProjectVideos that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ProjectVideoFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all ProjectVideos
+     * const projectVideos = await prisma.projectVideo.findMany()
+     * 
+     * // Get first 10 ProjectVideos
+     * const projectVideos = await prisma.projectVideo.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const projectVideoWithIdOnly = await prisma.projectVideo.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends ProjectVideoFindManyArgs>(args?: SelectSubset<T, ProjectVideoFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ProjectVideoPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a ProjectVideo.
+     * @param {ProjectVideoCreateArgs} args - Arguments to create a ProjectVideo.
+     * @example
+     * // Create one ProjectVideo
+     * const ProjectVideo = await prisma.projectVideo.create({
+     *   data: {
+     *     // ... data to create a ProjectVideo
+     *   }
+     * })
+     * 
+     */
+    create<T extends ProjectVideoCreateArgs>(args: SelectSubset<T, ProjectVideoCreateArgs<ExtArgs>>): Prisma__ProjectVideoClient<$Result.GetResult<Prisma.$ProjectVideoPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many ProjectVideos.
+     * @param {ProjectVideoCreateManyArgs} args - Arguments to create many ProjectVideos.
+     * @example
+     * // Create many ProjectVideos
+     * const projectVideo = await prisma.projectVideo.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends ProjectVideoCreateManyArgs>(args?: SelectSubset<T, ProjectVideoCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many ProjectVideos and returns the data saved in the database.
+     * @param {ProjectVideoCreateManyAndReturnArgs} args - Arguments to create many ProjectVideos.
+     * @example
+     * // Create many ProjectVideos
+     * const projectVideo = await prisma.projectVideo.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many ProjectVideos and only return the `id`
+     * const projectVideoWithIdOnly = await prisma.projectVideo.createManyAndReturn({
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends ProjectVideoCreateManyAndReturnArgs>(args?: SelectSubset<T, ProjectVideoCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ProjectVideoPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Delete a ProjectVideo.
+     * @param {ProjectVideoDeleteArgs} args - Arguments to delete one ProjectVideo.
+     * @example
+     * // Delete one ProjectVideo
+     * const ProjectVideo = await prisma.projectVideo.delete({
+     *   where: {
+     *     // ... filter to delete one ProjectVideo
+     *   }
+     * })
+     * 
+     */
+    delete<T extends ProjectVideoDeleteArgs>(args: SelectSubset<T, ProjectVideoDeleteArgs<ExtArgs>>): Prisma__ProjectVideoClient<$Result.GetResult<Prisma.$ProjectVideoPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one ProjectVideo.
+     * @param {ProjectVideoUpdateArgs} args - Arguments to update one ProjectVideo.
+     * @example
+     * // Update one ProjectVideo
+     * const projectVideo = await prisma.projectVideo.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends ProjectVideoUpdateArgs>(args: SelectSubset<T, ProjectVideoUpdateArgs<ExtArgs>>): Prisma__ProjectVideoClient<$Result.GetResult<Prisma.$ProjectVideoPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more ProjectVideos.
+     * @param {ProjectVideoDeleteManyArgs} args - Arguments to filter ProjectVideos to delete.
+     * @example
+     * // Delete a few ProjectVideos
+     * const { count } = await prisma.projectVideo.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends ProjectVideoDeleteManyArgs>(args?: SelectSubset<T, ProjectVideoDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more ProjectVideos.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ProjectVideoUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many ProjectVideos
+     * const projectVideo = await prisma.projectVideo.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends ProjectVideoUpdateManyArgs>(args: SelectSubset<T, ProjectVideoUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more ProjectVideos and returns the data updated in the database.
+     * @param {ProjectVideoUpdateManyAndReturnArgs} args - Arguments to update many ProjectVideos.
+     * @example
+     * // Update many ProjectVideos
+     * const projectVideo = await prisma.projectVideo.updateManyAndReturn({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Update zero or more ProjectVideos and only return the `id`
+     * const projectVideoWithIdOnly = await prisma.projectVideo.updateManyAndReturn({
+     *   select: { id: true },
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    updateManyAndReturn<T extends ProjectVideoUpdateManyAndReturnArgs>(args: SelectSubset<T, ProjectVideoUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ProjectVideoPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Create or update one ProjectVideo.
+     * @param {ProjectVideoUpsertArgs} args - Arguments to update or create a ProjectVideo.
+     * @example
+     * // Update or create a ProjectVideo
+     * const projectVideo = await prisma.projectVideo.upsert({
+     *   create: {
+     *     // ... data to create a ProjectVideo
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the ProjectVideo we want to update
+     *   }
+     * })
+     */
+    upsert<T extends ProjectVideoUpsertArgs>(args: SelectSubset<T, ProjectVideoUpsertArgs<ExtArgs>>): Prisma__ProjectVideoClient<$Result.GetResult<Prisma.$ProjectVideoPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of ProjectVideos.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ProjectVideoCountArgs} args - Arguments to filter ProjectVideos to count.
+     * @example
+     * // Count the number of ProjectVideos
+     * const count = await prisma.projectVideo.count({
+     *   where: {
+     *     // ... the filter for the ProjectVideos we want to count
+     *   }
+     * })
+    **/
+    count<T extends ProjectVideoCountArgs>(
+      args?: Subset<T, ProjectVideoCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], ProjectVideoCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a ProjectVideo.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ProjectVideoAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends ProjectVideoAggregateArgs>(args: Subset<T, ProjectVideoAggregateArgs>): Prisma.PrismaPromise<GetProjectVideoAggregateType<T>>
+
+    /**
+     * Group by ProjectVideo.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ProjectVideoGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends ProjectVideoGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: ProjectVideoGroupByArgs['orderBy'] }
+        : { orderBy?: ProjectVideoGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, ProjectVideoGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetProjectVideoGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the ProjectVideo model
+   */
+  readonly fields: ProjectVideoFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for ProjectVideo.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__ProjectVideoClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    project<T extends ProjectDefaultArgs<ExtArgs> = {}>(args?: Subset<T, ProjectDefaultArgs<ExtArgs>>): Prisma__ProjectClient<$Result.GetResult<Prisma.$ProjectPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the ProjectVideo model
+   */
+  interface ProjectVideoFieldRefs {
+    readonly id: FieldRef<"ProjectVideo", 'String'>
+    readonly projectId: FieldRef<"ProjectVideo", 'String'>
+    readonly videoUrl: FieldRef<"ProjectVideo", 'String'>
+    readonly title: FieldRef<"ProjectVideo", 'String'>
+    readonly description: FieldRef<"ProjectVideo", 'String'>
+    readonly displayOrder: FieldRef<"ProjectVideo", 'Int'>
+    readonly createdAt: FieldRef<"ProjectVideo", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * ProjectVideo findUnique
+   */
+  export type ProjectVideoFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ProjectVideo
+     */
+    select?: ProjectVideoSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ProjectVideo
+     */
+    omit?: ProjectVideoOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ProjectVideoInclude<ExtArgs> | null
+    /**
+     * Filter, which ProjectVideo to fetch.
+     */
+    where: ProjectVideoWhereUniqueInput
+  }
+
+  /**
+   * ProjectVideo findUniqueOrThrow
+   */
+  export type ProjectVideoFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ProjectVideo
+     */
+    select?: ProjectVideoSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ProjectVideo
+     */
+    omit?: ProjectVideoOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ProjectVideoInclude<ExtArgs> | null
+    /**
+     * Filter, which ProjectVideo to fetch.
+     */
+    where: ProjectVideoWhereUniqueInput
+  }
+
+  /**
+   * ProjectVideo findFirst
+   */
+  export type ProjectVideoFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ProjectVideo
+     */
+    select?: ProjectVideoSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ProjectVideo
+     */
+    omit?: ProjectVideoOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ProjectVideoInclude<ExtArgs> | null
+    /**
+     * Filter, which ProjectVideo to fetch.
+     */
+    where?: ProjectVideoWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of ProjectVideos to fetch.
+     */
+    orderBy?: ProjectVideoOrderByWithRelationInput | ProjectVideoOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for ProjectVideos.
+     */
+    cursor?: ProjectVideoWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` ProjectVideos from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` ProjectVideos.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of ProjectVideos.
+     */
+    distinct?: ProjectVideoScalarFieldEnum | ProjectVideoScalarFieldEnum[]
+  }
+
+  /**
+   * ProjectVideo findFirstOrThrow
+   */
+  export type ProjectVideoFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ProjectVideo
+     */
+    select?: ProjectVideoSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ProjectVideo
+     */
+    omit?: ProjectVideoOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ProjectVideoInclude<ExtArgs> | null
+    /**
+     * Filter, which ProjectVideo to fetch.
+     */
+    where?: ProjectVideoWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of ProjectVideos to fetch.
+     */
+    orderBy?: ProjectVideoOrderByWithRelationInput | ProjectVideoOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for ProjectVideos.
+     */
+    cursor?: ProjectVideoWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` ProjectVideos from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` ProjectVideos.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of ProjectVideos.
+     */
+    distinct?: ProjectVideoScalarFieldEnum | ProjectVideoScalarFieldEnum[]
+  }
+
+  /**
+   * ProjectVideo findMany
+   */
+  export type ProjectVideoFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ProjectVideo
+     */
+    select?: ProjectVideoSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ProjectVideo
+     */
+    omit?: ProjectVideoOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ProjectVideoInclude<ExtArgs> | null
+    /**
+     * Filter, which ProjectVideos to fetch.
+     */
+    where?: ProjectVideoWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of ProjectVideos to fetch.
+     */
+    orderBy?: ProjectVideoOrderByWithRelationInput | ProjectVideoOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing ProjectVideos.
+     */
+    cursor?: ProjectVideoWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` ProjectVideos from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` ProjectVideos.
+     */
+    skip?: number
+    distinct?: ProjectVideoScalarFieldEnum | ProjectVideoScalarFieldEnum[]
+  }
+
+  /**
+   * ProjectVideo create
+   */
+  export type ProjectVideoCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ProjectVideo
+     */
+    select?: ProjectVideoSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ProjectVideo
+     */
+    omit?: ProjectVideoOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ProjectVideoInclude<ExtArgs> | null
+    /**
+     * The data needed to create a ProjectVideo.
+     */
+    data: XOR<ProjectVideoCreateInput, ProjectVideoUncheckedCreateInput>
+  }
+
+  /**
+   * ProjectVideo createMany
+   */
+  export type ProjectVideoCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many ProjectVideos.
+     */
+    data: ProjectVideoCreateManyInput | ProjectVideoCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * ProjectVideo createManyAndReturn
+   */
+  export type ProjectVideoCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ProjectVideo
+     */
+    select?: ProjectVideoSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the ProjectVideo
+     */
+    omit?: ProjectVideoOmit<ExtArgs> | null
+    /**
+     * The data used to create many ProjectVideos.
+     */
+    data: ProjectVideoCreateManyInput | ProjectVideoCreateManyInput[]
+    skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ProjectVideoIncludeCreateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * ProjectVideo update
+   */
+  export type ProjectVideoUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ProjectVideo
+     */
+    select?: ProjectVideoSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ProjectVideo
+     */
+    omit?: ProjectVideoOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ProjectVideoInclude<ExtArgs> | null
+    /**
+     * The data needed to update a ProjectVideo.
+     */
+    data: XOR<ProjectVideoUpdateInput, ProjectVideoUncheckedUpdateInput>
+    /**
+     * Choose, which ProjectVideo to update.
+     */
+    where: ProjectVideoWhereUniqueInput
+  }
+
+  /**
+   * ProjectVideo updateMany
+   */
+  export type ProjectVideoUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update ProjectVideos.
+     */
+    data: XOR<ProjectVideoUpdateManyMutationInput, ProjectVideoUncheckedUpdateManyInput>
+    /**
+     * Filter which ProjectVideos to update
+     */
+    where?: ProjectVideoWhereInput
+    /**
+     * Limit how many ProjectVideos to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * ProjectVideo updateManyAndReturn
+   */
+  export type ProjectVideoUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ProjectVideo
+     */
+    select?: ProjectVideoSelectUpdateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the ProjectVideo
+     */
+    omit?: ProjectVideoOmit<ExtArgs> | null
+    /**
+     * The data used to update ProjectVideos.
+     */
+    data: XOR<ProjectVideoUpdateManyMutationInput, ProjectVideoUncheckedUpdateManyInput>
+    /**
+     * Filter which ProjectVideos to update
+     */
+    where?: ProjectVideoWhereInput
+    /**
+     * Limit how many ProjectVideos to update.
+     */
+    limit?: number
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ProjectVideoIncludeUpdateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * ProjectVideo upsert
+   */
+  export type ProjectVideoUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ProjectVideo
+     */
+    select?: ProjectVideoSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ProjectVideo
+     */
+    omit?: ProjectVideoOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ProjectVideoInclude<ExtArgs> | null
+    /**
+     * The filter to search for the ProjectVideo to update in case it exists.
+     */
+    where: ProjectVideoWhereUniqueInput
+    /**
+     * In case the ProjectVideo found by the `where` argument doesn't exist, create a new ProjectVideo with this data.
+     */
+    create: XOR<ProjectVideoCreateInput, ProjectVideoUncheckedCreateInput>
+    /**
+     * In case the ProjectVideo was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<ProjectVideoUpdateInput, ProjectVideoUncheckedUpdateInput>
+  }
+
+  /**
+   * ProjectVideo delete
+   */
+  export type ProjectVideoDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ProjectVideo
+     */
+    select?: ProjectVideoSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ProjectVideo
+     */
+    omit?: ProjectVideoOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ProjectVideoInclude<ExtArgs> | null
+    /**
+     * Filter which ProjectVideo to delete.
+     */
+    where: ProjectVideoWhereUniqueInput
+  }
+
+  /**
+   * ProjectVideo deleteMany
+   */
+  export type ProjectVideoDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which ProjectVideos to delete
+     */
+    where?: ProjectVideoWhereInput
+    /**
+     * Limit how many ProjectVideos to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * ProjectVideo without action
+   */
+  export type ProjectVideoDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ProjectVideo
+     */
+    select?: ProjectVideoSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ProjectVideo
+     */
+    omit?: ProjectVideoOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ProjectVideoInclude<ExtArgs> | null
+  }
+
+
+  /**
    * Model SoftwareMeta
    */
 
@@ -6015,6 +7243,7 @@ export namespace Prisma {
     uptime: number | null
     analyticsNote: string | null
     createdAt: Date | null
+    updatedAt: Date | null
   }
 
   export type SoftwareMetaMaxAggregateOutputType = {
@@ -6028,6 +7257,7 @@ export namespace Prisma {
     uptime: number | null
     analyticsNote: string | null
     createdAt: Date | null
+    updatedAt: Date | null
   }
 
   export type SoftwareMetaCountAggregateOutputType = {
@@ -6042,6 +7272,7 @@ export namespace Prisma {
     uptime: number
     analyticsNote: number
     createdAt: number
+    updatedAt: number
     _all: number
   }
 
@@ -6071,6 +7302,7 @@ export namespace Prisma {
     uptime?: true
     analyticsNote?: true
     createdAt?: true
+    updatedAt?: true
   }
 
   export type SoftwareMetaMaxAggregateInputType = {
@@ -6084,6 +7316,7 @@ export namespace Prisma {
     uptime?: true
     analyticsNote?: true
     createdAt?: true
+    updatedAt?: true
   }
 
   export type SoftwareMetaCountAggregateInputType = {
@@ -6098,6 +7331,7 @@ export namespace Prisma {
     uptime?: true
     analyticsNote?: true
     createdAt?: true
+    updatedAt?: true
     _all?: true
   }
 
@@ -6199,6 +7433,7 @@ export namespace Prisma {
     uptime: number | null
     analyticsNote: string | null
     createdAt: Date
+    updatedAt: Date
     _count: SoftwareMetaCountAggregateOutputType | null
     _avg: SoftwareMetaAvgAggregateOutputType | null
     _sum: SoftwareMetaSumAggregateOutputType | null
@@ -6232,6 +7467,7 @@ export namespace Prisma {
     uptime?: boolean
     analyticsNote?: boolean
     createdAt?: boolean
+    updatedAt?: boolean
     project?: boolean | ProjectDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["softwareMeta"]>
 
@@ -6247,6 +7483,7 @@ export namespace Prisma {
     uptime?: boolean
     analyticsNote?: boolean
     createdAt?: boolean
+    updatedAt?: boolean
     project?: boolean | ProjectDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["softwareMeta"]>
 
@@ -6262,6 +7499,7 @@ export namespace Prisma {
     uptime?: boolean
     analyticsNote?: boolean
     createdAt?: boolean
+    updatedAt?: boolean
     project?: boolean | ProjectDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["softwareMeta"]>
 
@@ -6277,9 +7515,10 @@ export namespace Prisma {
     uptime?: boolean
     analyticsNote?: boolean
     createdAt?: boolean
+    updatedAt?: boolean
   }
 
-  export type SoftwareMetaOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "projectId" | "techStack" | "liveUrl" | "repoUrl" | "lighthouseScore" | "pageLoadMs" | "monthlyVisitors" | "uptime" | "analyticsNote" | "createdAt", ExtArgs["result"]["softwareMeta"]>
+  export type SoftwareMetaOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "projectId" | "techStack" | "liveUrl" | "repoUrl" | "lighthouseScore" | "pageLoadMs" | "monthlyVisitors" | "uptime" | "analyticsNote" | "createdAt" | "updatedAt", ExtArgs["result"]["softwareMeta"]>
   export type SoftwareMetaInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     project?: boolean | ProjectDefaultArgs<ExtArgs>
   }
@@ -6307,6 +7546,7 @@ export namespace Prisma {
       uptime: number | null
       analyticsNote: string | null
       createdAt: Date
+      updatedAt: Date
     }, ExtArgs["result"]["softwareMeta"]>
     composites: {}
   }
@@ -6742,6 +7982,7 @@ export namespace Prisma {
     readonly uptime: FieldRef<"SoftwareMeta", 'Float'>
     readonly analyticsNote: FieldRef<"SoftwareMeta", 'String'>
     readonly createdAt: FieldRef<"SoftwareMeta", 'DateTime'>
+    readonly updatedAt: FieldRef<"SoftwareMeta", 'DateTime'>
   }
     
 
@@ -7181,25 +8422,27 @@ export namespace Prisma {
   export type ArtMetaMinAggregateOutputType = {
     id: string | null
     projectId: string | null
-    medium: $Enums.ArtMedium | null
+    medium: string | null
     dimensions: string | null
     year: number | null
     isAvailable: boolean | null
     price: number | null
     shopUrl: string | null
     createdAt: Date | null
+    updatedAt: Date | null
   }
 
   export type ArtMetaMaxAggregateOutputType = {
     id: string | null
     projectId: string | null
-    medium: $Enums.ArtMedium | null
+    medium: string | null
     dimensions: string | null
     year: number | null
     isAvailable: boolean | null
     price: number | null
     shopUrl: string | null
     createdAt: Date | null
+    updatedAt: Date | null
   }
 
   export type ArtMetaCountAggregateOutputType = {
@@ -7212,6 +8455,7 @@ export namespace Prisma {
     price: number
     shopUrl: number
     createdAt: number
+    updatedAt: number
     _all: number
   }
 
@@ -7236,6 +8480,7 @@ export namespace Prisma {
     price?: true
     shopUrl?: true
     createdAt?: true
+    updatedAt?: true
   }
 
   export type ArtMetaMaxAggregateInputType = {
@@ -7248,6 +8493,7 @@ export namespace Prisma {
     price?: true
     shopUrl?: true
     createdAt?: true
+    updatedAt?: true
   }
 
   export type ArtMetaCountAggregateInputType = {
@@ -7260,6 +8506,7 @@ export namespace Prisma {
     price?: true
     shopUrl?: true
     createdAt?: true
+    updatedAt?: true
     _all?: true
   }
 
@@ -7352,13 +8599,14 @@ export namespace Prisma {
   export type ArtMetaGroupByOutputType = {
     id: string
     projectId: string
-    medium: $Enums.ArtMedium
+    medium: string | null
     dimensions: string | null
     year: number | null
     isAvailable: boolean
     price: number | null
     shopUrl: string | null
     createdAt: Date
+    updatedAt: Date
     _count: ArtMetaCountAggregateOutputType | null
     _avg: ArtMetaAvgAggregateOutputType | null
     _sum: ArtMetaSumAggregateOutputType | null
@@ -7390,6 +8638,7 @@ export namespace Prisma {
     price?: boolean
     shopUrl?: boolean
     createdAt?: boolean
+    updatedAt?: boolean
     project?: boolean | ProjectDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["artMeta"]>
 
@@ -7403,6 +8652,7 @@ export namespace Prisma {
     price?: boolean
     shopUrl?: boolean
     createdAt?: boolean
+    updatedAt?: boolean
     project?: boolean | ProjectDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["artMeta"]>
 
@@ -7416,6 +8666,7 @@ export namespace Prisma {
     price?: boolean
     shopUrl?: boolean
     createdAt?: boolean
+    updatedAt?: boolean
     project?: boolean | ProjectDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["artMeta"]>
 
@@ -7429,9 +8680,10 @@ export namespace Prisma {
     price?: boolean
     shopUrl?: boolean
     createdAt?: boolean
+    updatedAt?: boolean
   }
 
-  export type ArtMetaOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "projectId" | "medium" | "dimensions" | "year" | "isAvailable" | "price" | "shopUrl" | "createdAt", ExtArgs["result"]["artMeta"]>
+  export type ArtMetaOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "projectId" | "medium" | "dimensions" | "year" | "isAvailable" | "price" | "shopUrl" | "createdAt" | "updatedAt", ExtArgs["result"]["artMeta"]>
   export type ArtMetaInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     project?: boolean | ProjectDefaultArgs<ExtArgs>
   }
@@ -7450,13 +8702,14 @@ export namespace Prisma {
     scalars: $Extensions.GetPayloadResult<{
       id: string
       projectId: string
-      medium: $Enums.ArtMedium
+      medium: string | null
       dimensions: string | null
       year: number | null
       isAvailable: boolean
       price: number | null
       shopUrl: string | null
       createdAt: Date
+      updatedAt: Date
     }, ExtArgs["result"]["artMeta"]>
     composites: {}
   }
@@ -7883,13 +9136,14 @@ export namespace Prisma {
   interface ArtMetaFieldRefs {
     readonly id: FieldRef<"ArtMeta", 'String'>
     readonly projectId: FieldRef<"ArtMeta", 'String'>
-    readonly medium: FieldRef<"ArtMeta", 'ArtMedium'>
+    readonly medium: FieldRef<"ArtMeta", 'String'>
     readonly dimensions: FieldRef<"ArtMeta", 'String'>
     readonly year: FieldRef<"ArtMeta", 'Int'>
     readonly isAvailable: FieldRef<"ArtMeta", 'Boolean'>
     readonly price: FieldRef<"ArtMeta", 'Float'>
     readonly shopUrl: FieldRef<"ArtMeta", 'String'>
     readonly createdAt: FieldRef<"ArtMeta", 'DateTime'>
+    readonly updatedAt: FieldRef<"ArtMeta", 'DateTime'>
   }
     
 
@@ -8331,6 +9585,7 @@ export namespace Prisma {
     year: number | null
     behanceUrl: string | null
     createdAt: Date | null
+    updatedAt: Date | null
   }
 
   export type DesignMetaMaxAggregateOutputType = {
@@ -8340,6 +9595,7 @@ export namespace Prisma {
     year: number | null
     behanceUrl: string | null
     createdAt: Date | null
+    updatedAt: Date | null
   }
 
   export type DesignMetaCountAggregateOutputType = {
@@ -8350,6 +9606,7 @@ export namespace Prisma {
     year: number
     behanceUrl: number
     createdAt: number
+    updatedAt: number
     _all: number
   }
 
@@ -8369,6 +9626,7 @@ export namespace Prisma {
     year?: true
     behanceUrl?: true
     createdAt?: true
+    updatedAt?: true
   }
 
   export type DesignMetaMaxAggregateInputType = {
@@ -8378,6 +9636,7 @@ export namespace Prisma {
     year?: true
     behanceUrl?: true
     createdAt?: true
+    updatedAt?: true
   }
 
   export type DesignMetaCountAggregateInputType = {
@@ -8388,6 +9647,7 @@ export namespace Prisma {
     year?: true
     behanceUrl?: true
     createdAt?: true
+    updatedAt?: true
     _all?: true
   }
 
@@ -8485,6 +9745,7 @@ export namespace Prisma {
     year: number | null
     behanceUrl: string | null
     createdAt: Date
+    updatedAt: Date
     _count: DesignMetaCountAggregateOutputType | null
     _avg: DesignMetaAvgAggregateOutputType | null
     _sum: DesignMetaSumAggregateOutputType | null
@@ -8514,6 +9775,7 @@ export namespace Prisma {
     year?: boolean
     behanceUrl?: boolean
     createdAt?: boolean
+    updatedAt?: boolean
     project?: boolean | ProjectDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["designMeta"]>
 
@@ -8525,6 +9787,7 @@ export namespace Prisma {
     year?: boolean
     behanceUrl?: boolean
     createdAt?: boolean
+    updatedAt?: boolean
     project?: boolean | ProjectDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["designMeta"]>
 
@@ -8536,6 +9799,7 @@ export namespace Prisma {
     year?: boolean
     behanceUrl?: boolean
     createdAt?: boolean
+    updatedAt?: boolean
     project?: boolean | ProjectDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["designMeta"]>
 
@@ -8547,9 +9811,10 @@ export namespace Prisma {
     year?: boolean
     behanceUrl?: boolean
     createdAt?: boolean
+    updatedAt?: boolean
   }
 
-  export type DesignMetaOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "projectId" | "software" | "clientName" | "year" | "behanceUrl" | "createdAt", ExtArgs["result"]["designMeta"]>
+  export type DesignMetaOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "projectId" | "software" | "clientName" | "year" | "behanceUrl" | "createdAt" | "updatedAt", ExtArgs["result"]["designMeta"]>
   export type DesignMetaInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     project?: boolean | ProjectDefaultArgs<ExtArgs>
   }
@@ -8573,6 +9838,7 @@ export namespace Prisma {
       year: number | null
       behanceUrl: string | null
       createdAt: Date
+      updatedAt: Date
     }, ExtArgs["result"]["designMeta"]>
     composites: {}
   }
@@ -9004,6 +10270,7 @@ export namespace Prisma {
     readonly year: FieldRef<"DesignMeta", 'Int'>
     readonly behanceUrl: FieldRef<"DesignMeta", 'String'>
     readonly createdAt: FieldRef<"DesignMeta", 'DateTime'>
+    readonly updatedAt: FieldRef<"DesignMeta", 'DateTime'>
   }
     
 
@@ -9483,6 +10750,19 @@ export namespace Prisma {
   export type ProjectLinkScalarFieldEnum = (typeof ProjectLinkScalarFieldEnum)[keyof typeof ProjectLinkScalarFieldEnum]
 
 
+  export const ProjectVideoScalarFieldEnum: {
+    id: 'id',
+    projectId: 'projectId',
+    videoUrl: 'videoUrl',
+    title: 'title',
+    description: 'description',
+    displayOrder: 'displayOrder',
+    createdAt: 'createdAt'
+  };
+
+  export type ProjectVideoScalarFieldEnum = (typeof ProjectVideoScalarFieldEnum)[keyof typeof ProjectVideoScalarFieldEnum]
+
+
   export const SoftwareMetaScalarFieldEnum: {
     id: 'id',
     projectId: 'projectId',
@@ -9494,7 +10774,8 @@ export namespace Prisma {
     monthlyVisitors: 'monthlyVisitors',
     uptime: 'uptime',
     analyticsNote: 'analyticsNote',
-    createdAt: 'createdAt'
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
   };
 
   export type SoftwareMetaScalarFieldEnum = (typeof SoftwareMetaScalarFieldEnum)[keyof typeof SoftwareMetaScalarFieldEnum]
@@ -9509,7 +10790,8 @@ export namespace Prisma {
     isAvailable: 'isAvailable',
     price: 'price',
     shopUrl: 'shopUrl',
-    createdAt: 'createdAt'
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
   };
 
   export type ArtMetaScalarFieldEnum = (typeof ArtMetaScalarFieldEnum)[keyof typeof ArtMetaScalarFieldEnum]
@@ -9522,7 +10804,8 @@ export namespace Prisma {
     clientName: 'clientName',
     year: 'year',
     behanceUrl: 'behanceUrl',
-    createdAt: 'createdAt'
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
   };
 
   export type DesignMetaScalarFieldEnum = (typeof DesignMetaScalarFieldEnum)[keyof typeof DesignMetaScalarFieldEnum]
@@ -9660,20 +10943,6 @@ export namespace Prisma {
    */
   export type ListFloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float[]'>
     
-
-
-  /**
-   * Reference to a field of type 'ArtMedium'
-   */
-  export type EnumArtMediumFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ArtMedium'>
-    
-
-
-  /**
-   * Reference to a field of type 'ArtMedium[]'
-   */
-  export type ListEnumArtMediumFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ArtMedium[]'>
-    
   /**
    * Deep Input Types
    */
@@ -9746,6 +11015,7 @@ export namespace Prisma {
     updatedAt?: DateTimeFilter<"Project"> | Date | string
     images?: ProjectImageListRelationFilter
     links?: ProjectLinkListRelationFilter
+    videos?: ProjectVideoListRelationFilter
     softwareMeta?: XOR<SoftwareMetaNullableScalarRelationFilter, SoftwareMetaWhereInput> | null
     artMeta?: XOR<ArtMetaNullableScalarRelationFilter, ArtMetaWhereInput> | null
     designMeta?: XOR<DesignMetaNullableScalarRelationFilter, DesignMetaWhereInput> | null
@@ -9763,6 +11033,7 @@ export namespace Prisma {
     updatedAt?: SortOrder
     images?: ProjectImageOrderByRelationAggregateInput
     links?: ProjectLinkOrderByRelationAggregateInput
+    videos?: ProjectVideoOrderByRelationAggregateInput
     softwareMeta?: SoftwareMetaOrderByWithRelationInput
     artMeta?: ArtMetaOrderByWithRelationInput
     designMeta?: DesignMetaOrderByWithRelationInput
@@ -9783,6 +11054,7 @@ export namespace Prisma {
     updatedAt?: DateTimeFilter<"Project"> | Date | string
     images?: ProjectImageListRelationFilter
     links?: ProjectLinkListRelationFilter
+    videos?: ProjectVideoListRelationFilter
     softwareMeta?: XOR<SoftwareMetaNullableScalarRelationFilter, SoftwareMetaWhereInput> | null
     artMeta?: XOR<ArtMetaNullableScalarRelationFilter, ArtMetaWhereInput> | null
     designMeta?: XOR<DesignMetaNullableScalarRelationFilter, DesignMetaWhereInput> | null
@@ -9949,6 +11221,73 @@ export namespace Prisma {
     createdAt?: DateTimeWithAggregatesFilter<"ProjectLink"> | Date | string
   }
 
+  export type ProjectVideoWhereInput = {
+    AND?: ProjectVideoWhereInput | ProjectVideoWhereInput[]
+    OR?: ProjectVideoWhereInput[]
+    NOT?: ProjectVideoWhereInput | ProjectVideoWhereInput[]
+    id?: StringFilter<"ProjectVideo"> | string
+    projectId?: StringFilter<"ProjectVideo"> | string
+    videoUrl?: StringFilter<"ProjectVideo"> | string
+    title?: StringNullableFilter<"ProjectVideo"> | string | null
+    description?: StringNullableFilter<"ProjectVideo"> | string | null
+    displayOrder?: IntFilter<"ProjectVideo"> | number
+    createdAt?: DateTimeFilter<"ProjectVideo"> | Date | string
+    project?: XOR<ProjectScalarRelationFilter, ProjectWhereInput>
+  }
+
+  export type ProjectVideoOrderByWithRelationInput = {
+    id?: SortOrder
+    projectId?: SortOrder
+    videoUrl?: SortOrder
+    title?: SortOrderInput | SortOrder
+    description?: SortOrderInput | SortOrder
+    displayOrder?: SortOrder
+    createdAt?: SortOrder
+    project?: ProjectOrderByWithRelationInput
+  }
+
+  export type ProjectVideoWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    AND?: ProjectVideoWhereInput | ProjectVideoWhereInput[]
+    OR?: ProjectVideoWhereInput[]
+    NOT?: ProjectVideoWhereInput | ProjectVideoWhereInput[]
+    projectId?: StringFilter<"ProjectVideo"> | string
+    videoUrl?: StringFilter<"ProjectVideo"> | string
+    title?: StringNullableFilter<"ProjectVideo"> | string | null
+    description?: StringNullableFilter<"ProjectVideo"> | string | null
+    displayOrder?: IntFilter<"ProjectVideo"> | number
+    createdAt?: DateTimeFilter<"ProjectVideo"> | Date | string
+    project?: XOR<ProjectScalarRelationFilter, ProjectWhereInput>
+  }, "id">
+
+  export type ProjectVideoOrderByWithAggregationInput = {
+    id?: SortOrder
+    projectId?: SortOrder
+    videoUrl?: SortOrder
+    title?: SortOrderInput | SortOrder
+    description?: SortOrderInput | SortOrder
+    displayOrder?: SortOrder
+    createdAt?: SortOrder
+    _count?: ProjectVideoCountOrderByAggregateInput
+    _avg?: ProjectVideoAvgOrderByAggregateInput
+    _max?: ProjectVideoMaxOrderByAggregateInput
+    _min?: ProjectVideoMinOrderByAggregateInput
+    _sum?: ProjectVideoSumOrderByAggregateInput
+  }
+
+  export type ProjectVideoScalarWhereWithAggregatesInput = {
+    AND?: ProjectVideoScalarWhereWithAggregatesInput | ProjectVideoScalarWhereWithAggregatesInput[]
+    OR?: ProjectVideoScalarWhereWithAggregatesInput[]
+    NOT?: ProjectVideoScalarWhereWithAggregatesInput | ProjectVideoScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"ProjectVideo"> | string
+    projectId?: StringWithAggregatesFilter<"ProjectVideo"> | string
+    videoUrl?: StringWithAggregatesFilter<"ProjectVideo"> | string
+    title?: StringNullableWithAggregatesFilter<"ProjectVideo"> | string | null
+    description?: StringNullableWithAggregatesFilter<"ProjectVideo"> | string | null
+    displayOrder?: IntWithAggregatesFilter<"ProjectVideo"> | number
+    createdAt?: DateTimeWithAggregatesFilter<"ProjectVideo"> | Date | string
+  }
+
   export type SoftwareMetaWhereInput = {
     AND?: SoftwareMetaWhereInput | SoftwareMetaWhereInput[]
     OR?: SoftwareMetaWhereInput[]
@@ -9964,6 +11303,7 @@ export namespace Prisma {
     uptime?: FloatNullableFilter<"SoftwareMeta"> | number | null
     analyticsNote?: StringNullableFilter<"SoftwareMeta"> | string | null
     createdAt?: DateTimeFilter<"SoftwareMeta"> | Date | string
+    updatedAt?: DateTimeFilter<"SoftwareMeta"> | Date | string
     project?: XOR<ProjectScalarRelationFilter, ProjectWhereInput>
   }
 
@@ -9979,6 +11319,7 @@ export namespace Prisma {
     uptime?: SortOrderInput | SortOrder
     analyticsNote?: SortOrderInput | SortOrder
     createdAt?: SortOrder
+    updatedAt?: SortOrder
     project?: ProjectOrderByWithRelationInput
   }
 
@@ -9997,6 +11338,7 @@ export namespace Prisma {
     uptime?: FloatNullableFilter<"SoftwareMeta"> | number | null
     analyticsNote?: StringNullableFilter<"SoftwareMeta"> | string | null
     createdAt?: DateTimeFilter<"SoftwareMeta"> | Date | string
+    updatedAt?: DateTimeFilter<"SoftwareMeta"> | Date | string
     project?: XOR<ProjectScalarRelationFilter, ProjectWhereInput>
   }, "id" | "projectId">
 
@@ -10012,6 +11354,7 @@ export namespace Prisma {
     uptime?: SortOrderInput | SortOrder
     analyticsNote?: SortOrderInput | SortOrder
     createdAt?: SortOrder
+    updatedAt?: SortOrder
     _count?: SoftwareMetaCountOrderByAggregateInput
     _avg?: SoftwareMetaAvgOrderByAggregateInput
     _max?: SoftwareMetaMaxOrderByAggregateInput
@@ -10034,6 +11377,7 @@ export namespace Prisma {
     uptime?: FloatNullableWithAggregatesFilter<"SoftwareMeta"> | number | null
     analyticsNote?: StringNullableWithAggregatesFilter<"SoftwareMeta"> | string | null
     createdAt?: DateTimeWithAggregatesFilter<"SoftwareMeta"> | Date | string
+    updatedAt?: DateTimeWithAggregatesFilter<"SoftwareMeta"> | Date | string
   }
 
   export type ArtMetaWhereInput = {
@@ -10042,26 +11386,28 @@ export namespace Prisma {
     NOT?: ArtMetaWhereInput | ArtMetaWhereInput[]
     id?: StringFilter<"ArtMeta"> | string
     projectId?: StringFilter<"ArtMeta"> | string
-    medium?: EnumArtMediumFilter<"ArtMeta"> | $Enums.ArtMedium
+    medium?: StringNullableFilter<"ArtMeta"> | string | null
     dimensions?: StringNullableFilter<"ArtMeta"> | string | null
     year?: IntNullableFilter<"ArtMeta"> | number | null
     isAvailable?: BoolFilter<"ArtMeta"> | boolean
     price?: FloatNullableFilter<"ArtMeta"> | number | null
     shopUrl?: StringNullableFilter<"ArtMeta"> | string | null
     createdAt?: DateTimeFilter<"ArtMeta"> | Date | string
+    updatedAt?: DateTimeFilter<"ArtMeta"> | Date | string
     project?: XOR<ProjectScalarRelationFilter, ProjectWhereInput>
   }
 
   export type ArtMetaOrderByWithRelationInput = {
     id?: SortOrder
     projectId?: SortOrder
-    medium?: SortOrder
+    medium?: SortOrderInput | SortOrder
     dimensions?: SortOrderInput | SortOrder
     year?: SortOrderInput | SortOrder
     isAvailable?: SortOrder
     price?: SortOrderInput | SortOrder
     shopUrl?: SortOrderInput | SortOrder
     createdAt?: SortOrder
+    updatedAt?: SortOrder
     project?: ProjectOrderByWithRelationInput
   }
 
@@ -10071,26 +11417,28 @@ export namespace Prisma {
     AND?: ArtMetaWhereInput | ArtMetaWhereInput[]
     OR?: ArtMetaWhereInput[]
     NOT?: ArtMetaWhereInput | ArtMetaWhereInput[]
-    medium?: EnumArtMediumFilter<"ArtMeta"> | $Enums.ArtMedium
+    medium?: StringNullableFilter<"ArtMeta"> | string | null
     dimensions?: StringNullableFilter<"ArtMeta"> | string | null
     year?: IntNullableFilter<"ArtMeta"> | number | null
     isAvailable?: BoolFilter<"ArtMeta"> | boolean
     price?: FloatNullableFilter<"ArtMeta"> | number | null
     shopUrl?: StringNullableFilter<"ArtMeta"> | string | null
     createdAt?: DateTimeFilter<"ArtMeta"> | Date | string
+    updatedAt?: DateTimeFilter<"ArtMeta"> | Date | string
     project?: XOR<ProjectScalarRelationFilter, ProjectWhereInput>
   }, "id" | "projectId">
 
   export type ArtMetaOrderByWithAggregationInput = {
     id?: SortOrder
     projectId?: SortOrder
-    medium?: SortOrder
+    medium?: SortOrderInput | SortOrder
     dimensions?: SortOrderInput | SortOrder
     year?: SortOrderInput | SortOrder
     isAvailable?: SortOrder
     price?: SortOrderInput | SortOrder
     shopUrl?: SortOrderInput | SortOrder
     createdAt?: SortOrder
+    updatedAt?: SortOrder
     _count?: ArtMetaCountOrderByAggregateInput
     _avg?: ArtMetaAvgOrderByAggregateInput
     _max?: ArtMetaMaxOrderByAggregateInput
@@ -10104,13 +11452,14 @@ export namespace Prisma {
     NOT?: ArtMetaScalarWhereWithAggregatesInput | ArtMetaScalarWhereWithAggregatesInput[]
     id?: StringWithAggregatesFilter<"ArtMeta"> | string
     projectId?: StringWithAggregatesFilter<"ArtMeta"> | string
-    medium?: EnumArtMediumWithAggregatesFilter<"ArtMeta"> | $Enums.ArtMedium
+    medium?: StringNullableWithAggregatesFilter<"ArtMeta"> | string | null
     dimensions?: StringNullableWithAggregatesFilter<"ArtMeta"> | string | null
     year?: IntNullableWithAggregatesFilter<"ArtMeta"> | number | null
     isAvailable?: BoolWithAggregatesFilter<"ArtMeta"> | boolean
     price?: FloatNullableWithAggregatesFilter<"ArtMeta"> | number | null
     shopUrl?: StringNullableWithAggregatesFilter<"ArtMeta"> | string | null
     createdAt?: DateTimeWithAggregatesFilter<"ArtMeta"> | Date | string
+    updatedAt?: DateTimeWithAggregatesFilter<"ArtMeta"> | Date | string
   }
 
   export type DesignMetaWhereInput = {
@@ -10124,6 +11473,7 @@ export namespace Prisma {
     year?: IntNullableFilter<"DesignMeta"> | number | null
     behanceUrl?: StringNullableFilter<"DesignMeta"> | string | null
     createdAt?: DateTimeFilter<"DesignMeta"> | Date | string
+    updatedAt?: DateTimeFilter<"DesignMeta"> | Date | string
     project?: XOR<ProjectScalarRelationFilter, ProjectWhereInput>
   }
 
@@ -10135,6 +11485,7 @@ export namespace Prisma {
     year?: SortOrderInput | SortOrder
     behanceUrl?: SortOrderInput | SortOrder
     createdAt?: SortOrder
+    updatedAt?: SortOrder
     project?: ProjectOrderByWithRelationInput
   }
 
@@ -10149,6 +11500,7 @@ export namespace Prisma {
     year?: IntNullableFilter<"DesignMeta"> | number | null
     behanceUrl?: StringNullableFilter<"DesignMeta"> | string | null
     createdAt?: DateTimeFilter<"DesignMeta"> | Date | string
+    updatedAt?: DateTimeFilter<"DesignMeta"> | Date | string
     project?: XOR<ProjectScalarRelationFilter, ProjectWhereInput>
   }, "id" | "projectId">
 
@@ -10160,6 +11512,7 @@ export namespace Prisma {
     year?: SortOrderInput | SortOrder
     behanceUrl?: SortOrderInput | SortOrder
     createdAt?: SortOrder
+    updatedAt?: SortOrder
     _count?: DesignMetaCountOrderByAggregateInput
     _avg?: DesignMetaAvgOrderByAggregateInput
     _max?: DesignMetaMaxOrderByAggregateInput
@@ -10178,6 +11531,7 @@ export namespace Prisma {
     year?: IntNullableWithAggregatesFilter<"DesignMeta"> | number | null
     behanceUrl?: StringNullableWithAggregatesFilter<"DesignMeta"> | string | null
     createdAt?: DateTimeWithAggregatesFilter<"DesignMeta"> | Date | string
+    updatedAt?: DateTimeWithAggregatesFilter<"DesignMeta"> | Date | string
   }
 
   export type UserCreateInput = {
@@ -10248,6 +11602,7 @@ export namespace Prisma {
     updatedAt?: Date | string
     images?: ProjectImageCreateNestedManyWithoutProjectInput
     links?: ProjectLinkCreateNestedManyWithoutProjectInput
+    videos?: ProjectVideoCreateNestedManyWithoutProjectInput
     softwareMeta?: SoftwareMetaCreateNestedOneWithoutProjectInput
     artMeta?: ArtMetaCreateNestedOneWithoutProjectInput
     designMeta?: DesignMetaCreateNestedOneWithoutProjectInput
@@ -10265,6 +11620,7 @@ export namespace Prisma {
     updatedAt?: Date | string
     images?: ProjectImageUncheckedCreateNestedManyWithoutProjectInput
     links?: ProjectLinkUncheckedCreateNestedManyWithoutProjectInput
+    videos?: ProjectVideoUncheckedCreateNestedManyWithoutProjectInput
     softwareMeta?: SoftwareMetaUncheckedCreateNestedOneWithoutProjectInput
     artMeta?: ArtMetaUncheckedCreateNestedOneWithoutProjectInput
     designMeta?: DesignMetaUncheckedCreateNestedOneWithoutProjectInput
@@ -10282,6 +11638,7 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     images?: ProjectImageUpdateManyWithoutProjectNestedInput
     links?: ProjectLinkUpdateManyWithoutProjectNestedInput
+    videos?: ProjectVideoUpdateManyWithoutProjectNestedInput
     softwareMeta?: SoftwareMetaUpdateOneWithoutProjectNestedInput
     artMeta?: ArtMetaUpdateOneWithoutProjectNestedInput
     designMeta?: DesignMetaUpdateOneWithoutProjectNestedInput
@@ -10299,6 +11656,7 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     images?: ProjectImageUncheckedUpdateManyWithoutProjectNestedInput
     links?: ProjectLinkUncheckedUpdateManyWithoutProjectNestedInput
+    videos?: ProjectVideoUncheckedUpdateManyWithoutProjectNestedInput
     softwareMeta?: SoftwareMetaUncheckedUpdateOneWithoutProjectNestedInput
     artMeta?: ArtMetaUncheckedUpdateOneWithoutProjectNestedInput
     designMeta?: DesignMetaUncheckedUpdateOneWithoutProjectNestedInput
@@ -10471,6 +11829,75 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
+  export type ProjectVideoCreateInput = {
+    id?: string
+    videoUrl: string
+    title?: string | null
+    description?: string | null
+    displayOrder?: number
+    createdAt?: Date | string
+    project: ProjectCreateNestedOneWithoutVideosInput
+  }
+
+  export type ProjectVideoUncheckedCreateInput = {
+    id?: string
+    projectId: string
+    videoUrl: string
+    title?: string | null
+    description?: string | null
+    displayOrder?: number
+    createdAt?: Date | string
+  }
+
+  export type ProjectVideoUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    videoUrl?: StringFieldUpdateOperationsInput | string
+    title?: NullableStringFieldUpdateOperationsInput | string | null
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    displayOrder?: IntFieldUpdateOperationsInput | number
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    project?: ProjectUpdateOneRequiredWithoutVideosNestedInput
+  }
+
+  export type ProjectVideoUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    projectId?: StringFieldUpdateOperationsInput | string
+    videoUrl?: StringFieldUpdateOperationsInput | string
+    title?: NullableStringFieldUpdateOperationsInput | string | null
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    displayOrder?: IntFieldUpdateOperationsInput | number
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type ProjectVideoCreateManyInput = {
+    id?: string
+    projectId: string
+    videoUrl: string
+    title?: string | null
+    description?: string | null
+    displayOrder?: number
+    createdAt?: Date | string
+  }
+
+  export type ProjectVideoUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    videoUrl?: StringFieldUpdateOperationsInput | string
+    title?: NullableStringFieldUpdateOperationsInput | string | null
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    displayOrder?: IntFieldUpdateOperationsInput | number
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type ProjectVideoUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    projectId?: StringFieldUpdateOperationsInput | string
+    videoUrl?: StringFieldUpdateOperationsInput | string
+    title?: NullableStringFieldUpdateOperationsInput | string | null
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    displayOrder?: IntFieldUpdateOperationsInput | number
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
   export type SoftwareMetaCreateInput = {
     id?: string
     techStack?: SoftwareMetaCreatetechStackInput | string[]
@@ -10482,6 +11909,7 @@ export namespace Prisma {
     uptime?: number | null
     analyticsNote?: string | null
     createdAt?: Date | string
+    updatedAt?: Date | string
     project: ProjectCreateNestedOneWithoutSoftwareMetaInput
   }
 
@@ -10497,6 +11925,7 @@ export namespace Prisma {
     uptime?: number | null
     analyticsNote?: string | null
     createdAt?: Date | string
+    updatedAt?: Date | string
   }
 
   export type SoftwareMetaUpdateInput = {
@@ -10510,6 +11939,7 @@ export namespace Prisma {
     uptime?: NullableFloatFieldUpdateOperationsInput | number | null
     analyticsNote?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     project?: ProjectUpdateOneRequiredWithoutSoftwareMetaNestedInput
   }
 
@@ -10525,6 +11955,7 @@ export namespace Prisma {
     uptime?: NullableFloatFieldUpdateOperationsInput | number | null
     analyticsNote?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type SoftwareMetaCreateManyInput = {
@@ -10539,6 +11970,7 @@ export namespace Prisma {
     uptime?: number | null
     analyticsNote?: string | null
     createdAt?: Date | string
+    updatedAt?: Date | string
   }
 
   export type SoftwareMetaUpdateManyMutationInput = {
@@ -10552,6 +11984,7 @@ export namespace Prisma {
     uptime?: NullableFloatFieldUpdateOperationsInput | number | null
     analyticsNote?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type SoftwareMetaUncheckedUpdateManyInput = {
@@ -10566,89 +11999,97 @@ export namespace Prisma {
     uptime?: NullableFloatFieldUpdateOperationsInput | number | null
     analyticsNote?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type ArtMetaCreateInput = {
     id?: string
-    medium: $Enums.ArtMedium
+    medium?: string | null
     dimensions?: string | null
     year?: number | null
     isAvailable?: boolean
     price?: number | null
     shopUrl?: string | null
     createdAt?: Date | string
+    updatedAt?: Date | string
     project: ProjectCreateNestedOneWithoutArtMetaInput
   }
 
   export type ArtMetaUncheckedCreateInput = {
     id?: string
     projectId: string
-    medium: $Enums.ArtMedium
+    medium?: string | null
     dimensions?: string | null
     year?: number | null
     isAvailable?: boolean
     price?: number | null
     shopUrl?: string | null
     createdAt?: Date | string
+    updatedAt?: Date | string
   }
 
   export type ArtMetaUpdateInput = {
     id?: StringFieldUpdateOperationsInput | string
-    medium?: EnumArtMediumFieldUpdateOperationsInput | $Enums.ArtMedium
+    medium?: NullableStringFieldUpdateOperationsInput | string | null
     dimensions?: NullableStringFieldUpdateOperationsInput | string | null
     year?: NullableIntFieldUpdateOperationsInput | number | null
     isAvailable?: BoolFieldUpdateOperationsInput | boolean
     price?: NullableFloatFieldUpdateOperationsInput | number | null
     shopUrl?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     project?: ProjectUpdateOneRequiredWithoutArtMetaNestedInput
   }
 
   export type ArtMetaUncheckedUpdateInput = {
     id?: StringFieldUpdateOperationsInput | string
     projectId?: StringFieldUpdateOperationsInput | string
-    medium?: EnumArtMediumFieldUpdateOperationsInput | $Enums.ArtMedium
+    medium?: NullableStringFieldUpdateOperationsInput | string | null
     dimensions?: NullableStringFieldUpdateOperationsInput | string | null
     year?: NullableIntFieldUpdateOperationsInput | number | null
     isAvailable?: BoolFieldUpdateOperationsInput | boolean
     price?: NullableFloatFieldUpdateOperationsInput | number | null
     shopUrl?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type ArtMetaCreateManyInput = {
     id?: string
     projectId: string
-    medium: $Enums.ArtMedium
+    medium?: string | null
     dimensions?: string | null
     year?: number | null
     isAvailable?: boolean
     price?: number | null
     shopUrl?: string | null
     createdAt?: Date | string
+    updatedAt?: Date | string
   }
 
   export type ArtMetaUpdateManyMutationInput = {
     id?: StringFieldUpdateOperationsInput | string
-    medium?: EnumArtMediumFieldUpdateOperationsInput | $Enums.ArtMedium
+    medium?: NullableStringFieldUpdateOperationsInput | string | null
     dimensions?: NullableStringFieldUpdateOperationsInput | string | null
     year?: NullableIntFieldUpdateOperationsInput | number | null
     isAvailable?: BoolFieldUpdateOperationsInput | boolean
     price?: NullableFloatFieldUpdateOperationsInput | number | null
     shopUrl?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type ArtMetaUncheckedUpdateManyInput = {
     id?: StringFieldUpdateOperationsInput | string
     projectId?: StringFieldUpdateOperationsInput | string
-    medium?: EnumArtMediumFieldUpdateOperationsInput | $Enums.ArtMedium
+    medium?: NullableStringFieldUpdateOperationsInput | string | null
     dimensions?: NullableStringFieldUpdateOperationsInput | string | null
     year?: NullableIntFieldUpdateOperationsInput | number | null
     isAvailable?: BoolFieldUpdateOperationsInput | boolean
     price?: NullableFloatFieldUpdateOperationsInput | number | null
     shopUrl?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type DesignMetaCreateInput = {
@@ -10658,6 +12099,7 @@ export namespace Prisma {
     year?: number | null
     behanceUrl?: string | null
     createdAt?: Date | string
+    updatedAt?: Date | string
     project: ProjectCreateNestedOneWithoutDesignMetaInput
   }
 
@@ -10669,6 +12111,7 @@ export namespace Prisma {
     year?: number | null
     behanceUrl?: string | null
     createdAt?: Date | string
+    updatedAt?: Date | string
   }
 
   export type DesignMetaUpdateInput = {
@@ -10678,6 +12121,7 @@ export namespace Prisma {
     year?: NullableIntFieldUpdateOperationsInput | number | null
     behanceUrl?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     project?: ProjectUpdateOneRequiredWithoutDesignMetaNestedInput
   }
 
@@ -10689,6 +12133,7 @@ export namespace Prisma {
     year?: NullableIntFieldUpdateOperationsInput | number | null
     behanceUrl?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type DesignMetaCreateManyInput = {
@@ -10699,6 +12144,7 @@ export namespace Prisma {
     year?: number | null
     behanceUrl?: string | null
     createdAt?: Date | string
+    updatedAt?: Date | string
   }
 
   export type DesignMetaUpdateManyMutationInput = {
@@ -10708,6 +12154,7 @@ export namespace Prisma {
     year?: NullableIntFieldUpdateOperationsInput | number | null
     behanceUrl?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type DesignMetaUncheckedUpdateManyInput = {
@@ -10718,6 +12165,7 @@ export namespace Prisma {
     year?: NullableIntFieldUpdateOperationsInput | number | null
     behanceUrl?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type StringFilter<$PrismaModel = never> = {
@@ -10877,6 +12325,12 @@ export namespace Prisma {
     none?: ProjectLinkWhereInput
   }
 
+  export type ProjectVideoListRelationFilter = {
+    every?: ProjectVideoWhereInput
+    some?: ProjectVideoWhereInput
+    none?: ProjectVideoWhereInput
+  }
+
   export type SoftwareMetaNullableScalarRelationFilter = {
     is?: SoftwareMetaWhereInput | null
     isNot?: SoftwareMetaWhereInput | null
@@ -10902,6 +12356,10 @@ export namespace Prisma {
   }
 
   export type ProjectLinkOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type ProjectVideoOrderByRelationAggregateInput = {
     _count?: SortOrder
   }
 
@@ -11094,6 +12552,44 @@ export namespace Prisma {
     _max?: NestedEnumLinkTypeFilter<$PrismaModel>
   }
 
+  export type ProjectVideoCountOrderByAggregateInput = {
+    id?: SortOrder
+    projectId?: SortOrder
+    videoUrl?: SortOrder
+    title?: SortOrder
+    description?: SortOrder
+    displayOrder?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type ProjectVideoAvgOrderByAggregateInput = {
+    displayOrder?: SortOrder
+  }
+
+  export type ProjectVideoMaxOrderByAggregateInput = {
+    id?: SortOrder
+    projectId?: SortOrder
+    videoUrl?: SortOrder
+    title?: SortOrder
+    description?: SortOrder
+    displayOrder?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type ProjectVideoMinOrderByAggregateInput = {
+    id?: SortOrder
+    projectId?: SortOrder
+    videoUrl?: SortOrder
+    title?: SortOrder
+    description?: SortOrder
+    displayOrder?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type ProjectVideoSumOrderByAggregateInput = {
+    displayOrder?: SortOrder
+  }
+
   export type IntNullableFilter<$PrismaModel = never> = {
     equals?: number | IntFieldRefInput<$PrismaModel> | null
     in?: number[] | ListIntFieldRefInput<$PrismaModel> | null
@@ -11128,6 +12624,7 @@ export namespace Prisma {
     uptime?: SortOrder
     analyticsNote?: SortOrder
     createdAt?: SortOrder
+    updatedAt?: SortOrder
   }
 
   export type SoftwareMetaAvgOrderByAggregateInput = {
@@ -11148,6 +12645,7 @@ export namespace Prisma {
     uptime?: SortOrder
     analyticsNote?: SortOrder
     createdAt?: SortOrder
+    updatedAt?: SortOrder
   }
 
   export type SoftwareMetaMinOrderByAggregateInput = {
@@ -11161,6 +12659,7 @@ export namespace Prisma {
     uptime?: SortOrder
     analyticsNote?: SortOrder
     createdAt?: SortOrder
+    updatedAt?: SortOrder
   }
 
   export type SoftwareMetaSumOrderByAggregateInput = {
@@ -11202,13 +12701,6 @@ export namespace Prisma {
     _max?: NestedFloatNullableFilter<$PrismaModel>
   }
 
-  export type EnumArtMediumFilter<$PrismaModel = never> = {
-    equals?: $Enums.ArtMedium | EnumArtMediumFieldRefInput<$PrismaModel>
-    in?: $Enums.ArtMedium[] | ListEnumArtMediumFieldRefInput<$PrismaModel>
-    notIn?: $Enums.ArtMedium[] | ListEnumArtMediumFieldRefInput<$PrismaModel>
-    not?: NestedEnumArtMediumFilter<$PrismaModel> | $Enums.ArtMedium
-  }
-
   export type ArtMetaCountOrderByAggregateInput = {
     id?: SortOrder
     projectId?: SortOrder
@@ -11219,6 +12711,7 @@ export namespace Prisma {
     price?: SortOrder
     shopUrl?: SortOrder
     createdAt?: SortOrder
+    updatedAt?: SortOrder
   }
 
   export type ArtMetaAvgOrderByAggregateInput = {
@@ -11236,6 +12729,7 @@ export namespace Prisma {
     price?: SortOrder
     shopUrl?: SortOrder
     createdAt?: SortOrder
+    updatedAt?: SortOrder
   }
 
   export type ArtMetaMinOrderByAggregateInput = {
@@ -11248,21 +12742,12 @@ export namespace Prisma {
     price?: SortOrder
     shopUrl?: SortOrder
     createdAt?: SortOrder
+    updatedAt?: SortOrder
   }
 
   export type ArtMetaSumOrderByAggregateInput = {
     year?: SortOrder
     price?: SortOrder
-  }
-
-  export type EnumArtMediumWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: $Enums.ArtMedium | EnumArtMediumFieldRefInput<$PrismaModel>
-    in?: $Enums.ArtMedium[] | ListEnumArtMediumFieldRefInput<$PrismaModel>
-    notIn?: $Enums.ArtMedium[] | ListEnumArtMediumFieldRefInput<$PrismaModel>
-    not?: NestedEnumArtMediumWithAggregatesFilter<$PrismaModel> | $Enums.ArtMedium
-    _count?: NestedIntFilter<$PrismaModel>
-    _min?: NestedEnumArtMediumFilter<$PrismaModel>
-    _max?: NestedEnumArtMediumFilter<$PrismaModel>
   }
 
   export type DesignMetaCountOrderByAggregateInput = {
@@ -11273,6 +12758,7 @@ export namespace Prisma {
     year?: SortOrder
     behanceUrl?: SortOrder
     createdAt?: SortOrder
+    updatedAt?: SortOrder
   }
 
   export type DesignMetaAvgOrderByAggregateInput = {
@@ -11286,6 +12772,7 @@ export namespace Prisma {
     year?: SortOrder
     behanceUrl?: SortOrder
     createdAt?: SortOrder
+    updatedAt?: SortOrder
   }
 
   export type DesignMetaMinOrderByAggregateInput = {
@@ -11295,6 +12782,7 @@ export namespace Prisma {
     year?: SortOrder
     behanceUrl?: SortOrder
     createdAt?: SortOrder
+    updatedAt?: SortOrder
   }
 
   export type DesignMetaSumOrderByAggregateInput = {
@@ -11331,6 +12819,13 @@ export namespace Prisma {
     connect?: ProjectLinkWhereUniqueInput | ProjectLinkWhereUniqueInput[]
   }
 
+  export type ProjectVideoCreateNestedManyWithoutProjectInput = {
+    create?: XOR<ProjectVideoCreateWithoutProjectInput, ProjectVideoUncheckedCreateWithoutProjectInput> | ProjectVideoCreateWithoutProjectInput[] | ProjectVideoUncheckedCreateWithoutProjectInput[]
+    connectOrCreate?: ProjectVideoCreateOrConnectWithoutProjectInput | ProjectVideoCreateOrConnectWithoutProjectInput[]
+    createMany?: ProjectVideoCreateManyProjectInputEnvelope
+    connect?: ProjectVideoWhereUniqueInput | ProjectVideoWhereUniqueInput[]
+  }
+
   export type SoftwareMetaCreateNestedOneWithoutProjectInput = {
     create?: XOR<SoftwareMetaCreateWithoutProjectInput, SoftwareMetaUncheckedCreateWithoutProjectInput>
     connectOrCreate?: SoftwareMetaCreateOrConnectWithoutProjectInput
@@ -11361,6 +12856,13 @@ export namespace Prisma {
     connectOrCreate?: ProjectLinkCreateOrConnectWithoutProjectInput | ProjectLinkCreateOrConnectWithoutProjectInput[]
     createMany?: ProjectLinkCreateManyProjectInputEnvelope
     connect?: ProjectLinkWhereUniqueInput | ProjectLinkWhereUniqueInput[]
+  }
+
+  export type ProjectVideoUncheckedCreateNestedManyWithoutProjectInput = {
+    create?: XOR<ProjectVideoCreateWithoutProjectInput, ProjectVideoUncheckedCreateWithoutProjectInput> | ProjectVideoCreateWithoutProjectInput[] | ProjectVideoUncheckedCreateWithoutProjectInput[]
+    connectOrCreate?: ProjectVideoCreateOrConnectWithoutProjectInput | ProjectVideoCreateOrConnectWithoutProjectInput[]
+    createMany?: ProjectVideoCreateManyProjectInputEnvelope
+    connect?: ProjectVideoWhereUniqueInput | ProjectVideoWhereUniqueInput[]
   }
 
   export type SoftwareMetaUncheckedCreateNestedOneWithoutProjectInput = {
@@ -11434,6 +12936,20 @@ export namespace Prisma {
     deleteMany?: ProjectLinkScalarWhereInput | ProjectLinkScalarWhereInput[]
   }
 
+  export type ProjectVideoUpdateManyWithoutProjectNestedInput = {
+    create?: XOR<ProjectVideoCreateWithoutProjectInput, ProjectVideoUncheckedCreateWithoutProjectInput> | ProjectVideoCreateWithoutProjectInput[] | ProjectVideoUncheckedCreateWithoutProjectInput[]
+    connectOrCreate?: ProjectVideoCreateOrConnectWithoutProjectInput | ProjectVideoCreateOrConnectWithoutProjectInput[]
+    upsert?: ProjectVideoUpsertWithWhereUniqueWithoutProjectInput | ProjectVideoUpsertWithWhereUniqueWithoutProjectInput[]
+    createMany?: ProjectVideoCreateManyProjectInputEnvelope
+    set?: ProjectVideoWhereUniqueInput | ProjectVideoWhereUniqueInput[]
+    disconnect?: ProjectVideoWhereUniqueInput | ProjectVideoWhereUniqueInput[]
+    delete?: ProjectVideoWhereUniqueInput | ProjectVideoWhereUniqueInput[]
+    connect?: ProjectVideoWhereUniqueInput | ProjectVideoWhereUniqueInput[]
+    update?: ProjectVideoUpdateWithWhereUniqueWithoutProjectInput | ProjectVideoUpdateWithWhereUniqueWithoutProjectInput[]
+    updateMany?: ProjectVideoUpdateManyWithWhereWithoutProjectInput | ProjectVideoUpdateManyWithWhereWithoutProjectInput[]
+    deleteMany?: ProjectVideoScalarWhereInput | ProjectVideoScalarWhereInput[]
+  }
+
   export type SoftwareMetaUpdateOneWithoutProjectNestedInput = {
     create?: XOR<SoftwareMetaCreateWithoutProjectInput, SoftwareMetaUncheckedCreateWithoutProjectInput>
     connectOrCreate?: SoftwareMetaCreateOrConnectWithoutProjectInput
@@ -11490,6 +13006,20 @@ export namespace Prisma {
     update?: ProjectLinkUpdateWithWhereUniqueWithoutProjectInput | ProjectLinkUpdateWithWhereUniqueWithoutProjectInput[]
     updateMany?: ProjectLinkUpdateManyWithWhereWithoutProjectInput | ProjectLinkUpdateManyWithWhereWithoutProjectInput[]
     deleteMany?: ProjectLinkScalarWhereInput | ProjectLinkScalarWhereInput[]
+  }
+
+  export type ProjectVideoUncheckedUpdateManyWithoutProjectNestedInput = {
+    create?: XOR<ProjectVideoCreateWithoutProjectInput, ProjectVideoUncheckedCreateWithoutProjectInput> | ProjectVideoCreateWithoutProjectInput[] | ProjectVideoUncheckedCreateWithoutProjectInput[]
+    connectOrCreate?: ProjectVideoCreateOrConnectWithoutProjectInput | ProjectVideoCreateOrConnectWithoutProjectInput[]
+    upsert?: ProjectVideoUpsertWithWhereUniqueWithoutProjectInput | ProjectVideoUpsertWithWhereUniqueWithoutProjectInput[]
+    createMany?: ProjectVideoCreateManyProjectInputEnvelope
+    set?: ProjectVideoWhereUniqueInput | ProjectVideoWhereUniqueInput[]
+    disconnect?: ProjectVideoWhereUniqueInput | ProjectVideoWhereUniqueInput[]
+    delete?: ProjectVideoWhereUniqueInput | ProjectVideoWhereUniqueInput[]
+    connect?: ProjectVideoWhereUniqueInput | ProjectVideoWhereUniqueInput[]
+    update?: ProjectVideoUpdateWithWhereUniqueWithoutProjectInput | ProjectVideoUpdateWithWhereUniqueWithoutProjectInput[]
+    updateMany?: ProjectVideoUpdateManyWithWhereWithoutProjectInput | ProjectVideoUpdateManyWithWhereWithoutProjectInput[]
+    deleteMany?: ProjectVideoScalarWhereInput | ProjectVideoScalarWhereInput[]
   }
 
   export type SoftwareMetaUncheckedUpdateOneWithoutProjectNestedInput = {
@@ -11554,6 +13084,20 @@ export namespace Prisma {
     update?: XOR<XOR<ProjectUpdateToOneWithWhereWithoutLinksInput, ProjectUpdateWithoutLinksInput>, ProjectUncheckedUpdateWithoutLinksInput>
   }
 
+  export type ProjectCreateNestedOneWithoutVideosInput = {
+    create?: XOR<ProjectCreateWithoutVideosInput, ProjectUncheckedCreateWithoutVideosInput>
+    connectOrCreate?: ProjectCreateOrConnectWithoutVideosInput
+    connect?: ProjectWhereUniqueInput
+  }
+
+  export type ProjectUpdateOneRequiredWithoutVideosNestedInput = {
+    create?: XOR<ProjectCreateWithoutVideosInput, ProjectUncheckedCreateWithoutVideosInput>
+    connectOrCreate?: ProjectCreateOrConnectWithoutVideosInput
+    upsert?: ProjectUpsertWithoutVideosInput
+    connect?: ProjectWhereUniqueInput
+    update?: XOR<XOR<ProjectUpdateToOneWithWhereWithoutVideosInput, ProjectUpdateWithoutVideosInput>, ProjectUncheckedUpdateWithoutVideosInput>
+  }
+
   export type SoftwareMetaCreatetechStackInput = {
     set: string[]
   }
@@ -11597,10 +13141,6 @@ export namespace Prisma {
     create?: XOR<ProjectCreateWithoutArtMetaInput, ProjectUncheckedCreateWithoutArtMetaInput>
     connectOrCreate?: ProjectCreateOrConnectWithoutArtMetaInput
     connect?: ProjectWhereUniqueInput
-  }
-
-  export type EnumArtMediumFieldUpdateOperationsInput = {
-    set?: $Enums.ArtMedium
   }
 
   export type ProjectUpdateOneRequiredWithoutArtMetaNestedInput = {
@@ -11877,23 +13417,6 @@ export namespace Prisma {
     _max?: NestedFloatNullableFilter<$PrismaModel>
   }
 
-  export type NestedEnumArtMediumFilter<$PrismaModel = never> = {
-    equals?: $Enums.ArtMedium | EnumArtMediumFieldRefInput<$PrismaModel>
-    in?: $Enums.ArtMedium[] | ListEnumArtMediumFieldRefInput<$PrismaModel>
-    notIn?: $Enums.ArtMedium[] | ListEnumArtMediumFieldRefInput<$PrismaModel>
-    not?: NestedEnumArtMediumFilter<$PrismaModel> | $Enums.ArtMedium
-  }
-
-  export type NestedEnumArtMediumWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: $Enums.ArtMedium | EnumArtMediumFieldRefInput<$PrismaModel>
-    in?: $Enums.ArtMedium[] | ListEnumArtMediumFieldRefInput<$PrismaModel>
-    notIn?: $Enums.ArtMedium[] | ListEnumArtMediumFieldRefInput<$PrismaModel>
-    not?: NestedEnumArtMediumWithAggregatesFilter<$PrismaModel> | $Enums.ArtMedium
-    _count?: NestedIntFilter<$PrismaModel>
-    _min?: NestedEnumArtMediumFilter<$PrismaModel>
-    _max?: NestedEnumArtMediumFilter<$PrismaModel>
-  }
-
   export type ProjectImageCreateWithoutProjectInput = {
     id?: string
     imageUrl: string
@@ -11948,6 +13471,34 @@ export namespace Prisma {
     skipDuplicates?: boolean
   }
 
+  export type ProjectVideoCreateWithoutProjectInput = {
+    id?: string
+    videoUrl: string
+    title?: string | null
+    description?: string | null
+    displayOrder?: number
+    createdAt?: Date | string
+  }
+
+  export type ProjectVideoUncheckedCreateWithoutProjectInput = {
+    id?: string
+    videoUrl: string
+    title?: string | null
+    description?: string | null
+    displayOrder?: number
+    createdAt?: Date | string
+  }
+
+  export type ProjectVideoCreateOrConnectWithoutProjectInput = {
+    where: ProjectVideoWhereUniqueInput
+    create: XOR<ProjectVideoCreateWithoutProjectInput, ProjectVideoUncheckedCreateWithoutProjectInput>
+  }
+
+  export type ProjectVideoCreateManyProjectInputEnvelope = {
+    data: ProjectVideoCreateManyProjectInput | ProjectVideoCreateManyProjectInput[]
+    skipDuplicates?: boolean
+  }
+
   export type SoftwareMetaCreateWithoutProjectInput = {
     id?: string
     techStack?: SoftwareMetaCreatetechStackInput | string[]
@@ -11959,6 +13510,7 @@ export namespace Prisma {
     uptime?: number | null
     analyticsNote?: string | null
     createdAt?: Date | string
+    updatedAt?: Date | string
   }
 
   export type SoftwareMetaUncheckedCreateWithoutProjectInput = {
@@ -11972,6 +13524,7 @@ export namespace Prisma {
     uptime?: number | null
     analyticsNote?: string | null
     createdAt?: Date | string
+    updatedAt?: Date | string
   }
 
   export type SoftwareMetaCreateOrConnectWithoutProjectInput = {
@@ -11981,24 +13534,26 @@ export namespace Prisma {
 
   export type ArtMetaCreateWithoutProjectInput = {
     id?: string
-    medium: $Enums.ArtMedium
+    medium?: string | null
     dimensions?: string | null
     year?: number | null
     isAvailable?: boolean
     price?: number | null
     shopUrl?: string | null
     createdAt?: Date | string
+    updatedAt?: Date | string
   }
 
   export type ArtMetaUncheckedCreateWithoutProjectInput = {
     id?: string
-    medium: $Enums.ArtMedium
+    medium?: string | null
     dimensions?: string | null
     year?: number | null
     isAvailable?: boolean
     price?: number | null
     shopUrl?: string | null
     createdAt?: Date | string
+    updatedAt?: Date | string
   }
 
   export type ArtMetaCreateOrConnectWithoutProjectInput = {
@@ -12013,6 +13568,7 @@ export namespace Prisma {
     year?: number | null
     behanceUrl?: string | null
     createdAt?: Date | string
+    updatedAt?: Date | string
   }
 
   export type DesignMetaUncheckedCreateWithoutProjectInput = {
@@ -12022,6 +13578,7 @@ export namespace Prisma {
     year?: number | null
     behanceUrl?: string | null
     createdAt?: Date | string
+    updatedAt?: Date | string
   }
 
   export type DesignMetaCreateOrConnectWithoutProjectInput = {
@@ -12086,6 +13643,35 @@ export namespace Prisma {
     createdAt?: DateTimeFilter<"ProjectLink"> | Date | string
   }
 
+  export type ProjectVideoUpsertWithWhereUniqueWithoutProjectInput = {
+    where: ProjectVideoWhereUniqueInput
+    update: XOR<ProjectVideoUpdateWithoutProjectInput, ProjectVideoUncheckedUpdateWithoutProjectInput>
+    create: XOR<ProjectVideoCreateWithoutProjectInput, ProjectVideoUncheckedCreateWithoutProjectInput>
+  }
+
+  export type ProjectVideoUpdateWithWhereUniqueWithoutProjectInput = {
+    where: ProjectVideoWhereUniqueInput
+    data: XOR<ProjectVideoUpdateWithoutProjectInput, ProjectVideoUncheckedUpdateWithoutProjectInput>
+  }
+
+  export type ProjectVideoUpdateManyWithWhereWithoutProjectInput = {
+    where: ProjectVideoScalarWhereInput
+    data: XOR<ProjectVideoUpdateManyMutationInput, ProjectVideoUncheckedUpdateManyWithoutProjectInput>
+  }
+
+  export type ProjectVideoScalarWhereInput = {
+    AND?: ProjectVideoScalarWhereInput | ProjectVideoScalarWhereInput[]
+    OR?: ProjectVideoScalarWhereInput[]
+    NOT?: ProjectVideoScalarWhereInput | ProjectVideoScalarWhereInput[]
+    id?: StringFilter<"ProjectVideo"> | string
+    projectId?: StringFilter<"ProjectVideo"> | string
+    videoUrl?: StringFilter<"ProjectVideo"> | string
+    title?: StringNullableFilter<"ProjectVideo"> | string | null
+    description?: StringNullableFilter<"ProjectVideo"> | string | null
+    displayOrder?: IntFilter<"ProjectVideo"> | number
+    createdAt?: DateTimeFilter<"ProjectVideo"> | Date | string
+  }
+
   export type SoftwareMetaUpsertWithoutProjectInput = {
     update: XOR<SoftwareMetaUpdateWithoutProjectInput, SoftwareMetaUncheckedUpdateWithoutProjectInput>
     create: XOR<SoftwareMetaCreateWithoutProjectInput, SoftwareMetaUncheckedCreateWithoutProjectInput>
@@ -12108,6 +13694,7 @@ export namespace Prisma {
     uptime?: NullableFloatFieldUpdateOperationsInput | number | null
     analyticsNote?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type SoftwareMetaUncheckedUpdateWithoutProjectInput = {
@@ -12121,6 +13708,7 @@ export namespace Prisma {
     uptime?: NullableFloatFieldUpdateOperationsInput | number | null
     analyticsNote?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type ArtMetaUpsertWithoutProjectInput = {
@@ -12136,24 +13724,26 @@ export namespace Prisma {
 
   export type ArtMetaUpdateWithoutProjectInput = {
     id?: StringFieldUpdateOperationsInput | string
-    medium?: EnumArtMediumFieldUpdateOperationsInput | $Enums.ArtMedium
+    medium?: NullableStringFieldUpdateOperationsInput | string | null
     dimensions?: NullableStringFieldUpdateOperationsInput | string | null
     year?: NullableIntFieldUpdateOperationsInput | number | null
     isAvailable?: BoolFieldUpdateOperationsInput | boolean
     price?: NullableFloatFieldUpdateOperationsInput | number | null
     shopUrl?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type ArtMetaUncheckedUpdateWithoutProjectInput = {
     id?: StringFieldUpdateOperationsInput | string
-    medium?: EnumArtMediumFieldUpdateOperationsInput | $Enums.ArtMedium
+    medium?: NullableStringFieldUpdateOperationsInput | string | null
     dimensions?: NullableStringFieldUpdateOperationsInput | string | null
     year?: NullableIntFieldUpdateOperationsInput | number | null
     isAvailable?: BoolFieldUpdateOperationsInput | boolean
     price?: NullableFloatFieldUpdateOperationsInput | number | null
     shopUrl?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type DesignMetaUpsertWithoutProjectInput = {
@@ -12174,6 +13764,7 @@ export namespace Prisma {
     year?: NullableIntFieldUpdateOperationsInput | number | null
     behanceUrl?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type DesignMetaUncheckedUpdateWithoutProjectInput = {
@@ -12183,6 +13774,7 @@ export namespace Prisma {
     year?: NullableIntFieldUpdateOperationsInput | number | null
     behanceUrl?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type ProjectCreateWithoutImagesInput = {
@@ -12196,6 +13788,7 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     links?: ProjectLinkCreateNestedManyWithoutProjectInput
+    videos?: ProjectVideoCreateNestedManyWithoutProjectInput
     softwareMeta?: SoftwareMetaCreateNestedOneWithoutProjectInput
     artMeta?: ArtMetaCreateNestedOneWithoutProjectInput
     designMeta?: DesignMetaCreateNestedOneWithoutProjectInput
@@ -12212,6 +13805,7 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     links?: ProjectLinkUncheckedCreateNestedManyWithoutProjectInput
+    videos?: ProjectVideoUncheckedCreateNestedManyWithoutProjectInput
     softwareMeta?: SoftwareMetaUncheckedCreateNestedOneWithoutProjectInput
     artMeta?: ArtMetaUncheckedCreateNestedOneWithoutProjectInput
     designMeta?: DesignMetaUncheckedCreateNestedOneWithoutProjectInput
@@ -12244,6 +13838,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     links?: ProjectLinkUpdateManyWithoutProjectNestedInput
+    videos?: ProjectVideoUpdateManyWithoutProjectNestedInput
     softwareMeta?: SoftwareMetaUpdateOneWithoutProjectNestedInput
     artMeta?: ArtMetaUpdateOneWithoutProjectNestedInput
     designMeta?: DesignMetaUpdateOneWithoutProjectNestedInput
@@ -12260,6 +13855,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     links?: ProjectLinkUncheckedUpdateManyWithoutProjectNestedInput
+    videos?: ProjectVideoUncheckedUpdateManyWithoutProjectNestedInput
     softwareMeta?: SoftwareMetaUncheckedUpdateOneWithoutProjectNestedInput
     artMeta?: ArtMetaUncheckedUpdateOneWithoutProjectNestedInput
     designMeta?: DesignMetaUncheckedUpdateOneWithoutProjectNestedInput
@@ -12276,6 +13872,7 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     images?: ProjectImageCreateNestedManyWithoutProjectInput
+    videos?: ProjectVideoCreateNestedManyWithoutProjectInput
     softwareMeta?: SoftwareMetaCreateNestedOneWithoutProjectInput
     artMeta?: ArtMetaCreateNestedOneWithoutProjectInput
     designMeta?: DesignMetaCreateNestedOneWithoutProjectInput
@@ -12292,6 +13889,7 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     images?: ProjectImageUncheckedCreateNestedManyWithoutProjectInput
+    videos?: ProjectVideoUncheckedCreateNestedManyWithoutProjectInput
     softwareMeta?: SoftwareMetaUncheckedCreateNestedOneWithoutProjectInput
     artMeta?: ArtMetaUncheckedCreateNestedOneWithoutProjectInput
     designMeta?: DesignMetaUncheckedCreateNestedOneWithoutProjectInput
@@ -12324,6 +13922,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     images?: ProjectImageUpdateManyWithoutProjectNestedInput
+    videos?: ProjectVideoUpdateManyWithoutProjectNestedInput
     softwareMeta?: SoftwareMetaUpdateOneWithoutProjectNestedInput
     artMeta?: ArtMetaUpdateOneWithoutProjectNestedInput
     designMeta?: DesignMetaUpdateOneWithoutProjectNestedInput
@@ -12340,6 +13939,91 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     images?: ProjectImageUncheckedUpdateManyWithoutProjectNestedInput
+    videos?: ProjectVideoUncheckedUpdateManyWithoutProjectNestedInput
+    softwareMeta?: SoftwareMetaUncheckedUpdateOneWithoutProjectNestedInput
+    artMeta?: ArtMetaUncheckedUpdateOneWithoutProjectNestedInput
+    designMeta?: DesignMetaUncheckedUpdateOneWithoutProjectNestedInput
+  }
+
+  export type ProjectCreateWithoutVideosInput = {
+    id?: string
+    title: string
+    category: $Enums.Category
+    description?: string | null
+    tags?: ProjectCreatetagsInput | string[]
+    displayOrder?: number
+    featured?: boolean
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    images?: ProjectImageCreateNestedManyWithoutProjectInput
+    links?: ProjectLinkCreateNestedManyWithoutProjectInput
+    softwareMeta?: SoftwareMetaCreateNestedOneWithoutProjectInput
+    artMeta?: ArtMetaCreateNestedOneWithoutProjectInput
+    designMeta?: DesignMetaCreateNestedOneWithoutProjectInput
+  }
+
+  export type ProjectUncheckedCreateWithoutVideosInput = {
+    id?: string
+    title: string
+    category: $Enums.Category
+    description?: string | null
+    tags?: ProjectCreatetagsInput | string[]
+    displayOrder?: number
+    featured?: boolean
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    images?: ProjectImageUncheckedCreateNestedManyWithoutProjectInput
+    links?: ProjectLinkUncheckedCreateNestedManyWithoutProjectInput
+    softwareMeta?: SoftwareMetaUncheckedCreateNestedOneWithoutProjectInput
+    artMeta?: ArtMetaUncheckedCreateNestedOneWithoutProjectInput
+    designMeta?: DesignMetaUncheckedCreateNestedOneWithoutProjectInput
+  }
+
+  export type ProjectCreateOrConnectWithoutVideosInput = {
+    where: ProjectWhereUniqueInput
+    create: XOR<ProjectCreateWithoutVideosInput, ProjectUncheckedCreateWithoutVideosInput>
+  }
+
+  export type ProjectUpsertWithoutVideosInput = {
+    update: XOR<ProjectUpdateWithoutVideosInput, ProjectUncheckedUpdateWithoutVideosInput>
+    create: XOR<ProjectCreateWithoutVideosInput, ProjectUncheckedCreateWithoutVideosInput>
+    where?: ProjectWhereInput
+  }
+
+  export type ProjectUpdateToOneWithWhereWithoutVideosInput = {
+    where?: ProjectWhereInput
+    data: XOR<ProjectUpdateWithoutVideosInput, ProjectUncheckedUpdateWithoutVideosInput>
+  }
+
+  export type ProjectUpdateWithoutVideosInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    category?: EnumCategoryFieldUpdateOperationsInput | $Enums.Category
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    tags?: ProjectUpdatetagsInput | string[]
+    displayOrder?: IntFieldUpdateOperationsInput | number
+    featured?: BoolFieldUpdateOperationsInput | boolean
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    images?: ProjectImageUpdateManyWithoutProjectNestedInput
+    links?: ProjectLinkUpdateManyWithoutProjectNestedInput
+    softwareMeta?: SoftwareMetaUpdateOneWithoutProjectNestedInput
+    artMeta?: ArtMetaUpdateOneWithoutProjectNestedInput
+    designMeta?: DesignMetaUpdateOneWithoutProjectNestedInput
+  }
+
+  export type ProjectUncheckedUpdateWithoutVideosInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    category?: EnumCategoryFieldUpdateOperationsInput | $Enums.Category
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    tags?: ProjectUpdatetagsInput | string[]
+    displayOrder?: IntFieldUpdateOperationsInput | number
+    featured?: BoolFieldUpdateOperationsInput | boolean
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    images?: ProjectImageUncheckedUpdateManyWithoutProjectNestedInput
+    links?: ProjectLinkUncheckedUpdateManyWithoutProjectNestedInput
     softwareMeta?: SoftwareMetaUncheckedUpdateOneWithoutProjectNestedInput
     artMeta?: ArtMetaUncheckedUpdateOneWithoutProjectNestedInput
     designMeta?: DesignMetaUncheckedUpdateOneWithoutProjectNestedInput
@@ -12357,6 +14041,7 @@ export namespace Prisma {
     updatedAt?: Date | string
     images?: ProjectImageCreateNestedManyWithoutProjectInput
     links?: ProjectLinkCreateNestedManyWithoutProjectInput
+    videos?: ProjectVideoCreateNestedManyWithoutProjectInput
     artMeta?: ArtMetaCreateNestedOneWithoutProjectInput
     designMeta?: DesignMetaCreateNestedOneWithoutProjectInput
   }
@@ -12373,6 +14058,7 @@ export namespace Prisma {
     updatedAt?: Date | string
     images?: ProjectImageUncheckedCreateNestedManyWithoutProjectInput
     links?: ProjectLinkUncheckedCreateNestedManyWithoutProjectInput
+    videos?: ProjectVideoUncheckedCreateNestedManyWithoutProjectInput
     artMeta?: ArtMetaUncheckedCreateNestedOneWithoutProjectInput
     designMeta?: DesignMetaUncheckedCreateNestedOneWithoutProjectInput
   }
@@ -12405,6 +14091,7 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     images?: ProjectImageUpdateManyWithoutProjectNestedInput
     links?: ProjectLinkUpdateManyWithoutProjectNestedInput
+    videos?: ProjectVideoUpdateManyWithoutProjectNestedInput
     artMeta?: ArtMetaUpdateOneWithoutProjectNestedInput
     designMeta?: DesignMetaUpdateOneWithoutProjectNestedInput
   }
@@ -12421,6 +14108,7 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     images?: ProjectImageUncheckedUpdateManyWithoutProjectNestedInput
     links?: ProjectLinkUncheckedUpdateManyWithoutProjectNestedInput
+    videos?: ProjectVideoUncheckedUpdateManyWithoutProjectNestedInput
     artMeta?: ArtMetaUncheckedUpdateOneWithoutProjectNestedInput
     designMeta?: DesignMetaUncheckedUpdateOneWithoutProjectNestedInput
   }
@@ -12437,6 +14125,7 @@ export namespace Prisma {
     updatedAt?: Date | string
     images?: ProjectImageCreateNestedManyWithoutProjectInput
     links?: ProjectLinkCreateNestedManyWithoutProjectInput
+    videos?: ProjectVideoCreateNestedManyWithoutProjectInput
     softwareMeta?: SoftwareMetaCreateNestedOneWithoutProjectInput
     designMeta?: DesignMetaCreateNestedOneWithoutProjectInput
   }
@@ -12453,6 +14142,7 @@ export namespace Prisma {
     updatedAt?: Date | string
     images?: ProjectImageUncheckedCreateNestedManyWithoutProjectInput
     links?: ProjectLinkUncheckedCreateNestedManyWithoutProjectInput
+    videos?: ProjectVideoUncheckedCreateNestedManyWithoutProjectInput
     softwareMeta?: SoftwareMetaUncheckedCreateNestedOneWithoutProjectInput
     designMeta?: DesignMetaUncheckedCreateNestedOneWithoutProjectInput
   }
@@ -12485,6 +14175,7 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     images?: ProjectImageUpdateManyWithoutProjectNestedInput
     links?: ProjectLinkUpdateManyWithoutProjectNestedInput
+    videos?: ProjectVideoUpdateManyWithoutProjectNestedInput
     softwareMeta?: SoftwareMetaUpdateOneWithoutProjectNestedInput
     designMeta?: DesignMetaUpdateOneWithoutProjectNestedInput
   }
@@ -12501,6 +14192,7 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     images?: ProjectImageUncheckedUpdateManyWithoutProjectNestedInput
     links?: ProjectLinkUncheckedUpdateManyWithoutProjectNestedInput
+    videos?: ProjectVideoUncheckedUpdateManyWithoutProjectNestedInput
     softwareMeta?: SoftwareMetaUncheckedUpdateOneWithoutProjectNestedInput
     designMeta?: DesignMetaUncheckedUpdateOneWithoutProjectNestedInput
   }
@@ -12517,6 +14209,7 @@ export namespace Prisma {
     updatedAt?: Date | string
     images?: ProjectImageCreateNestedManyWithoutProjectInput
     links?: ProjectLinkCreateNestedManyWithoutProjectInput
+    videos?: ProjectVideoCreateNestedManyWithoutProjectInput
     softwareMeta?: SoftwareMetaCreateNestedOneWithoutProjectInput
     artMeta?: ArtMetaCreateNestedOneWithoutProjectInput
   }
@@ -12533,6 +14226,7 @@ export namespace Prisma {
     updatedAt?: Date | string
     images?: ProjectImageUncheckedCreateNestedManyWithoutProjectInput
     links?: ProjectLinkUncheckedCreateNestedManyWithoutProjectInput
+    videos?: ProjectVideoUncheckedCreateNestedManyWithoutProjectInput
     softwareMeta?: SoftwareMetaUncheckedCreateNestedOneWithoutProjectInput
     artMeta?: ArtMetaUncheckedCreateNestedOneWithoutProjectInput
   }
@@ -12565,6 +14259,7 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     images?: ProjectImageUpdateManyWithoutProjectNestedInput
     links?: ProjectLinkUpdateManyWithoutProjectNestedInput
+    videos?: ProjectVideoUpdateManyWithoutProjectNestedInput
     softwareMeta?: SoftwareMetaUpdateOneWithoutProjectNestedInput
     artMeta?: ArtMetaUpdateOneWithoutProjectNestedInput
   }
@@ -12581,6 +14276,7 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     images?: ProjectImageUncheckedUpdateManyWithoutProjectNestedInput
     links?: ProjectLinkUncheckedUpdateManyWithoutProjectNestedInput
+    videos?: ProjectVideoUncheckedUpdateManyWithoutProjectNestedInput
     softwareMeta?: SoftwareMetaUncheckedUpdateOneWithoutProjectNestedInput
     artMeta?: ArtMetaUncheckedUpdateOneWithoutProjectNestedInput
   }
@@ -12598,6 +14294,15 @@ export namespace Prisma {
     label: string
     url: string
     linkType?: $Enums.LinkType
+    displayOrder?: number
+    createdAt?: Date | string
+  }
+
+  export type ProjectVideoCreateManyProjectInput = {
+    id?: string
+    videoUrl: string
+    title?: string | null
+    description?: string | null
     displayOrder?: number
     createdAt?: Date | string
   }
@@ -12649,6 +14354,33 @@ export namespace Prisma {
     label?: StringFieldUpdateOperationsInput | string
     url?: StringFieldUpdateOperationsInput | string
     linkType?: EnumLinkTypeFieldUpdateOperationsInput | $Enums.LinkType
+    displayOrder?: IntFieldUpdateOperationsInput | number
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type ProjectVideoUpdateWithoutProjectInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    videoUrl?: StringFieldUpdateOperationsInput | string
+    title?: NullableStringFieldUpdateOperationsInput | string | null
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    displayOrder?: IntFieldUpdateOperationsInput | number
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type ProjectVideoUncheckedUpdateWithoutProjectInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    videoUrl?: StringFieldUpdateOperationsInput | string
+    title?: NullableStringFieldUpdateOperationsInput | string | null
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    displayOrder?: IntFieldUpdateOperationsInput | number
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type ProjectVideoUncheckedUpdateManyWithoutProjectInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    videoUrl?: StringFieldUpdateOperationsInput | string
+    title?: NullableStringFieldUpdateOperationsInput | string | null
+    description?: NullableStringFieldUpdateOperationsInput | string | null
     displayOrder?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }

@@ -1,37 +1,33 @@
 // src/pages/Auth.tsx
+
 import { useState, useEffect } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Eye, EyeOff, LogIn, Lock, Mail, AlertCircle,
-  ShieldCheck, Clock, Fingerprint,
+  Eye, EyeOff, Lock, Mail, AlertCircle,
+  ShieldCheck, Fingerprint, UserPlus, LogIn, User,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
-// ── Lockout countdown ─────────────────────────────────────────────────────────
-function Countdown({ ms, onDone }: { ms: number; onDone: () => void }) {
-  const [left, setLeft] = useState(ms);
-  useEffect(() => {
-    const iv = setInterval(() => {
-      setLeft(p => {
-        if (p <= 1000) { clearInterval(iv); onDone(); return 0; }
-        return p - 1000;
-      });
-    }, 1000);
-    return () => clearInterval(iv);
-  }, []);
-  const mins = String(Math.floor(left / 60000)).padStart(2, "0");
-  const secs = String(Math.floor((left % 60000) / 1000)).padStart(2, "0");
-  return <span className="font-mono font-bold text-destructive">{mins}:{secs}</span>;
-}
-
 // ── Reusable input ────────────────────────────────────────────────────────────
 function InputField({
-  label, type, value, onChange, placeholder, icon: Icon, rightEl, autoComplete,
+  label,
+  type,
+  value,
+  onChange,
+  placeholder,
+  icon: Icon,
+  rightEl,
+  autoComplete,
 }: {
-  label: string; type: string; value: string;
-  onChange: (v: string) => void; placeholder: string;
-  icon: React.ElementType; rightEl?: React.ReactNode; autoComplete?: string;
+  label: string;
+  type: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder: string;
+  icon: React.ElementType;
+  rightEl?: React.ReactNode;
+  autoComplete?: string;
 }) {
   return (
     <div>
@@ -39,11 +35,16 @@ function InputField({
         {label}
       </label>
       <div className="relative group">
-        <Icon size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" />
+        <Icon
+          size={15}
+          className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors"
+        />
         <input
-          type={type} value={value}
-          onChange={e => onChange(e.target.value)}
-          required placeholder={placeholder}
+          type={type}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          required
+          placeholder={placeholder}
           autoComplete={autoComplete}
           className="w-full pl-10 pr-10 py-3 bg-secondary/60 border border-border rounded-xl text-sm font-body text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/40 transition-all"
         />
@@ -54,119 +55,313 @@ function InputField({
 }
 
 // ── Sign-in form ──────────────────────────────────────────────────────────────
-function SignInForm() {
-  const { signIn } = useAuth();
-  const navigate = useNavigate();
+function SignInForm({ onSuccess }: { onSuccess: () => void }) {
+  const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [lockoutMs, setLockoutMs] = useState<number | null>(null);
-  const [attempts, setAttempts] = useState<number | null>(null);
+  const [success, setSuccess] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    setAttempts(null);
-    if (password.length < 6) { setError("Password must be at least 6 characters."); return; }
-
     setSubmitting(true);
-    const result = await signIn(email.trim(), password);
-    setSubmitting(false);
+    setSuccess(false);
 
-    if (result.error) {
-      if (result.lockedMs) {
-        setLockoutMs(result.lockedMs);
-      } else {
-        setError(result.error.message);
-        if (result.remainingAttempts !== undefined) setAttempts(result.remainingAttempts);
-      }
-    } else {
-      navigate("/admin", { replace: true });
+    if (!email.trim()) {
+      setError("Email is required");
+      setSubmitting(false);
+      return;
     }
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters");
+      setSubmitting(false);
+      return;
+    }
+
+    const result = await login(email.trim(), password);
+
+    if (result.success) {
+      setSuccess(true);
+      // Call the onSuccess callback to handle navigation
+      setTimeout(() => {
+        onSuccess();
+      }, 300);
+    } else {
+      setError(result.error || "Login failed. Please try again.");
+    }
+
+    setSubmitting(false);
   };
 
-  if (lockoutMs !== null) {
-    return (
-      <div className="py-6 text-center space-y-4">
-        <div className="w-14 h-14 rounded-2xl bg-destructive/10 border border-destructive/20 flex items-center justify-center mx-auto">
-          <Clock size={24} className="text-destructive" />
-        </div>
-        <p className="font-display font-bold text-foreground text-lg">Account Locked</p>
-        <p className="text-muted-foreground text-sm">Too many failed attempts. Try again in:</p>
-        <div className="text-4xl font-mono tracking-widest">
-          <Countdown ms={lockoutMs} onDone={() => setLockoutMs(null)} />
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <motion.form key="signin" onSubmit={handleSubmit}
-      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      className="space-y-5">
-      <InputField label="Email Address" type="email" value={email}
-        onChange={v => { setEmail(v); setError(null); }}
-        placeholder="admin@example.com" icon={Mail} autoComplete="username" />
+    <motion.form
+      initial={{ opacity: 0, x: -20 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: 20 }}
+      onSubmit={handleSubmit}
+      className="space-y-5"
+    >
+      <InputField
+        label="Email Address"
+        type="email"
+        value={email}
+        onChange={(v) => { setEmail(v); setError(null); }}
+        placeholder="your@email.com"
+        icon={Mail}
+        autoComplete="username"
+      />
 
-      <InputField label="Password" type={showPassword ? "text" : "password"} value={password}
-        onChange={v => { setPassword(v); setError(null); }}
-        placeholder="••••••••••••" icon={Lock} autoComplete="current-password"
+      <InputField
+        label="Password"
+        type={showPassword ? "text" : "password"}
+        value={password}
+        onChange={(v) => { setPassword(v); setError(null); }}
+        placeholder="••••••••••••"
+        icon={Lock}
+        autoComplete="current-password"
         rightEl={
-          <button type="button" onClick={() => setShowPassword(p => !p)}
-            className="text-muted-foreground hover:text-foreground transition-colors" tabIndex={-1}>
+          <button
+            type="button"
+            onClick={() => setShowPassword((p) => !p)}
+            className="text-muted-foreground hover:text-foreground transition-colors"
+            tabIndex={-1}
+          >
             {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
           </button>
         }
       />
 
-      <AnimatePresence>
-        {error && (
-          <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-            className="flex items-start gap-3 px-4 py-3 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm">
-            <AlertCircle size={16} className="flex-shrink-0 mt-0.5" />
-            <div>
-              <p>{error}</p>
-              {attempts !== null && attempts > 0 && (
-                <p className="text-[11px] text-destructive/70 font-mono mt-0.5">
-                  {attempts} attempt{attempts !== 1 ? "s" : ""} remaining before lockout
-                </p>
-              )}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {error && (
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0 }}
+          className="flex items-start gap-3 px-4 py-3 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm"
+        >
+          <AlertCircle size={16} className="flex-shrink-0 mt-0.5" />
+          <span>{error}</span>
+        </motion.div>
+      )}
 
-      <button type="submit" disabled={submitting}
-        className="w-full py-3.5 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 text-black font-display font-bold text-sm flex items-center justify-center gap-2 hover:from-amber-300 hover:to-amber-400 transition-all shadow-lg shadow-amber-500/25 disabled:opacity-50 disabled:cursor-not-allowed">
-        {submitting
-          ? <div className="w-4 h-4 border-2 border-black/20 border-t-black/80 rounded-full animate-spin" />
-          : <><Fingerprint size={16} /> Authenticate</>}
+      {success && (
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-start gap-3 px-4 py-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm"
+        >
+          <span>✓ Login successful! Redirecting...</span>
+        </motion.div>
+      )}
+
+      <button
+        type="submit"
+        disabled={submitting}
+        className="w-full py-3.5 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 text-black font-display font-bold text-sm flex items-center justify-center gap-2 hover:from-amber-300 hover:to-amber-400 transition-all shadow-lg shadow-amber-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {submitting ? (
+          <div className="w-4 h-4 border-2 border-black/20 border-t-black/80 rounded-full animate-spin" />
+        ) : (
+          <>
+            <LogIn size={16} /> Sign In
+          </>
+        )}
       </button>
+    </motion.form>
+  );
+}
+
+// ── Register form ─────────────────────────────────────────────────────────────
+function RegisterForm({ switchToLogin }: { switchToLogin: () => void }) {
+  const { register } = useAuth();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [success, setSuccess] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSubmitting(true);
+    setSuccess(false);
+
+    if (!email.trim()) {
+      setError("Email is required");
+      setSubmitting(false);
+      return;
+    }
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters");
+      setSubmitting(false);
+      return;
+    }
+
+    const result = await register(email.trim(), password, name.trim() || undefined);
+
+    if (result.success) {
+      setSuccess(true);
+      setEmail("");
+      setPassword("");
+      setName("");
+      setTimeout(() => {
+        setSuccess(false);
+        switchToLogin();
+      }, 2000);
+    } else {
+      setError(result.error || "Registration failed. Please try again.");
+    }
+
+    setSubmitting(false);
+  };
+
+  return (
+    <motion.form
+      initial={{ opacity: 0, x: 20 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: -20 }}
+      onSubmit={handleSubmit}
+      className="space-y-5"
+    >
+      <InputField
+        label="Full Name (Optional)"
+        type="text"
+        value={name}
+        onChange={setName}
+        placeholder="Your Name"
+        icon={User}
+        autoComplete="name"
+      />
+
+      <InputField
+        label="Email Address"
+        type="email"
+        value={email}
+        onChange={(v) => { setEmail(v); setError(null); }}
+        placeholder="your@email.com"
+        icon={Mail}
+        autoComplete="email"
+      />
+
+      <InputField
+        label="Password"
+        type={showPassword ? "text" : "password"}
+        value={password}
+        onChange={(v) => { setPassword(v); setError(null); }}
+        placeholder="Minimum 6 characters"
+        icon={Lock}
+        autoComplete="new-password"
+        rightEl={
+          <button
+            type="button"
+            onClick={() => setShowPassword((p) => !p)}
+            className="text-muted-foreground hover:text-foreground transition-colors"
+            tabIndex={-1}
+          >
+            {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+          </button>
+        }
+      />
+
+      {error && (
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0 }}
+          className="flex items-start gap-3 px-4 py-3 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm"
+        >
+          <AlertCircle size={16} className="flex-shrink-0 mt-0.5" />
+          <span>{error}</span>
+        </motion.div>
+      )}
+
+      {success && (
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-start gap-3 px-4 py-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm"
+        >
+          <span>✓ Registration successful! Redirecting to login...</span>
+        </motion.div>
+      )}
+
+      <button
+        type="submit"
+        disabled={submitting}
+        className="w-full py-3.5 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 text-black font-display font-bold text-sm flex items-center justify-center gap-2 hover:from-amber-300 hover:to-amber-400 transition-all shadow-lg shadow-amber-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {submitting ? (
+          <div className="w-4 h-4 border-2 border-black/20 border-t-black/80 rounded-full animate-spin" />
+        ) : (
+          <>
+            <UserPlus size={16} /> Create Account
+          </>
+        )}
+      </button>
+
+      <p className="text-center text-sm text-muted-foreground">
+        Already have an account?{" "}
+        <button
+          type="button"
+          onClick={switchToLogin}
+          className="text-primary hover:text-primary/80 font-medium transition-colors"
+        >
+          Sign In
+        </button>
+      </p>
     </motion.form>
   );
 }
 
 // ── Page shell ────────────────────────────────────────────────────────────────
 const Auth = () => {
-  const { user, isAdmin, loading } = useAuth();
+  const { user, isAdmin, loading, checkAuth } = useAuth();
   const navigate = useNavigate();
+  const [isLogin, setIsLogin] = useState(true);
 
+  // Check if already logged in
   useEffect(() => {
-    if (!loading && user && isAdmin) navigate("/admin", { replace: true });
-  }, [loading, user, isAdmin, navigate]);
+    // Check auth status
+    const isAuthed = checkAuth();
+    console.log("🔍 Auth check on mount:", isAuthed, "user:", user, "isAdmin:", isAdmin);
+    
+    if (!loading && user && isAdmin) {
+      console.log("🔀 Redirecting to admin from Auth page (useEffect)");
+      navigate("/admin", { replace: true });
+    }
+  }, [loading, user, isAdmin, navigate, checkAuth]);
 
-  if (!loading && user && isAdmin) return <Navigate to="/admin" replace />;
+  // Handle successful login
+  const handleLoginSuccess = () => {
+    console.log("🎯 Login success callback - navigating to admin");
+    // Force a check of auth status
+    checkAuth();
+    // Navigate to admin
+    navigate("/admin", { replace: true });
+  };
+
+  // Redirect if already logged in and is admin (for the render)
+  if (!loading && user && isAdmin) {
+    console.log("🔀 Redirecting to admin from Auth page (render)");
+    return <Navigate to="/admin" replace />;
+  }
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4 relative overflow-hidden">
       {/* Background */}
       <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute inset-0 opacity-[0.025]" style={{
-          backgroundImage: "linear-gradient(hsl(36 90% 55%) 1px, transparent 1px), linear-gradient(90deg, hsl(36 90% 55%) 1px, transparent 1px)",
-          backgroundSize: "48px 48px",
-        }} />
+        <div
+          className="absolute inset-0 opacity-[0.025]"
+          style={{
+            backgroundImage:
+              "linear-gradient(hsl(36 90% 55%) 1px, transparent 1px), linear-gradient(90deg, hsl(36 90% 55%) 1px, transparent 1px)",
+            backgroundSize: "48px 48px",
+          }}
+        />
         <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-amber-500/6 rounded-full blur-[140px]" />
         <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-amber-600/5 rounded-full blur-[120px]" />
         <div className="absolute top-0 left-0 w-48 h-48 border-l border-t border-primary/10" />
@@ -203,8 +398,25 @@ const Auth = () => {
           </div>
 
           <AnimatePresence mode="wait">
-            <SignInForm key="signin" />
+            {isLogin ? (
+              <SignInForm key="login" onSuccess={handleLoginSuccess} />
+            ) : (
+              <RegisterForm key="register" switchToLogin={() => setIsLogin(true)} />
+            )}
           </AnimatePresence>
+
+          {isLogin && (
+            <p className="text-center text-sm text-muted-foreground mt-4">
+              Don't have an account?{" "}
+              <button
+                type="button"
+                onClick={() => setIsLogin(false)}
+                className="text-primary hover:text-primary/80 font-medium transition-colors"
+              >
+                Register
+              </button>
+            </p>
+          )}
         </div>
 
         <p className="text-center text-muted-foreground/40 font-mono text-[10px] mt-6 tracking-wider">

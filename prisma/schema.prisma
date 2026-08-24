@@ -1,5 +1,5 @@
 // prisma/schema.prisma
-// Prisma 7.x — PostgreSQL via Supabase
+// Prisma 7.x — PostgreSQL via Neon
 
 generator client {
   provider = "prisma-client-js"
@@ -39,6 +39,7 @@ model Project {
 
   images       ProjectImage[]
   links        ProjectLink[]
+  videos       ProjectVideo[]
   softwareMeta SoftwareMeta?
   artMeta      ArtMeta?
   designMeta   DesignMeta?
@@ -46,7 +47,6 @@ model Project {
   @@map("projects")
 }
 
-// FIX: Added PHOTOGRAPHY to the enum
 enum Category {
   WEB_DEV     @map("Web Dev")
   DESIGN      @map("Design")
@@ -87,6 +87,19 @@ enum LinkType {
   OTHER @map("other")
 }
 
+// ─── PROJECT VIDEOS ────────────────────────────
+model ProjectVideo {
+  id           String   @id @default(uuid())
+  projectId    String   @map("project_id")
+  videoUrl     String   @map("video_url")
+  title        String?
+  description  String?  @db.Text
+  displayOrder Int      @default(0) @map("display_order")
+  createdAt    DateTime @default(now()) @map("created_at")
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  @@map("project_videos")
+}
+
 // ─── SOFTWARE DEV META ────────────────────────
 model SoftwareMeta {
   id              String   @id @default(uuid())
@@ -100,6 +113,7 @@ model SoftwareMeta {
   uptime          Float?
   analyticsNote   String?  @db.Text @map("analytics_note")
   createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
   @@map("software_meta")
 }
@@ -108,26 +122,16 @@ model SoftwareMeta {
 model ArtMeta {
   id          String    @id @default(uuid())
   projectId   String    @unique @map("project_id")
-  medium      ArtMedium
+  medium      String?
   dimensions  String?
   year        Int?
   isAvailable Boolean   @default(true) @map("is_available")
   price       Float?
   shopUrl     String?   @map("shop_url")
   createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
   @@map("art_meta")
-}
-
-enum ArtMedium {
-  PENCIL
-  GRAPHITE
-  BALLPOINT
-  OIL
-  ACRYLIC
-  WATERCOLOR
-  MIXED_MEDIA @map("Mixed Media")
-  OTHER
 }
 
 // ─── GRAPHIC DESIGN / PHOTOGRAPHY META ───────
@@ -139,6 +143,7 @@ model DesignMeta {
   year       Int?
   behanceUrl String?  @map("behance_url")
   createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
   @@map("design_meta")
 }

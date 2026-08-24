@@ -159,6 +159,16 @@ exports.Prisma.ProjectLinkScalarFieldEnum = {
   createdAt: 'createdAt'
 };
 
+exports.Prisma.ProjectVideoScalarFieldEnum = {
+  id: 'id',
+  projectId: 'projectId',
+  videoUrl: 'videoUrl',
+  title: 'title',
+  description: 'description',
+  displayOrder: 'displayOrder',
+  createdAt: 'createdAt'
+};
+
 exports.Prisma.SoftwareMetaScalarFieldEnum = {
   id: 'id',
   projectId: 'projectId',
@@ -170,7 +180,8 @@ exports.Prisma.SoftwareMetaScalarFieldEnum = {
   monthlyVisitors: 'monthlyVisitors',
   uptime: 'uptime',
   analyticsNote: 'analyticsNote',
-  createdAt: 'createdAt'
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
 };
 
 exports.Prisma.ArtMetaScalarFieldEnum = {
@@ -182,7 +193,8 @@ exports.Prisma.ArtMetaScalarFieldEnum = {
   isAvailable: 'isAvailable',
   price: 'price',
   shopUrl: 'shopUrl',
-  createdAt: 'createdAt'
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
 };
 
 exports.Prisma.DesignMetaScalarFieldEnum = {
@@ -192,7 +204,8 @@ exports.Prisma.DesignMetaScalarFieldEnum = {
   clientName: 'clientName',
   year: 'year',
   behanceUrl: 'behanceUrl',
-  createdAt: 'createdAt'
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
 };
 
 exports.Prisma.SortOrder = {
@@ -229,22 +242,12 @@ exports.LinkType = exports.$Enums.LinkType = {
   OTHER: 'OTHER'
 };
 
-exports.ArtMedium = exports.$Enums.ArtMedium = {
-  PENCIL: 'PENCIL',
-  GRAPHITE: 'GRAPHITE',
-  BALLPOINT: 'BALLPOINT',
-  OIL: 'OIL',
-  ACRYLIC: 'ACRYLIC',
-  WATERCOLOR: 'WATERCOLOR',
-  MIXED_MEDIA: 'MIXED_MEDIA',
-  OTHER: 'OTHER'
-};
-
 exports.Prisma.ModelName = {
   User: 'User',
   Project: 'Project',
   ProjectImage: 'ProjectImage',
   ProjectLink: 'ProjectLink',
+  ProjectVideo: 'ProjectVideo',
   SoftwareMeta: 'SoftwareMeta',
   ArtMeta: 'ArtMeta',
   DesignMeta: 'DesignMeta'

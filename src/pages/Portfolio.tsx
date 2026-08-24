@@ -8,10 +8,12 @@ import {
   PenTool, Palette, Code, Star, Loader2, Camera
 } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
-import { supabase } from "@/integrations/supabase/client";
 
-// ── API base — strip trailing slash ──────────────────────────────────────────
-const API_BASE = (import.meta.env.VITE_API_URL || "http://localhost:3001/api").replace(/\/$/, "");
+// ── API base — normalized so it NEVER includes a trailing /api, regardless
+//    of whether VITE_API_URL was set with or without it. Every fetch below
+//    appends /api/... explicitly, matching ProjectManager.tsx's convention. ──
+const RAW_API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3001";
+const API_BASE = RAW_API_BASE.replace(/\/$/, "").replace(/\/api$/, "");
 
 // ── Image source resolver ─────────────────────────────────────────────────────
 // Handles three cases:
@@ -25,7 +27,7 @@ function resolveImageSrc(src: string): string {
   if (trimmed.startsWith("data:") || trimmed.startsWith("blob:")) return trimmed;
   // Remote URLs go through the proxy
   if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
-    return `${API_BASE}/image-proxy?url=${encodeURIComponent(trimmed)}`;
+    return `${API_BASE}/api/image-proxy?url=${encodeURIComponent(trimmed)}`;
   }
   return trimmed;
 }
@@ -126,27 +128,6 @@ interface RawProject {
   description?: string; tags?: string[]; featured?: boolean;
   images?: RawImage[]; links?: RawLink[];
   softwareMeta?: RawSoftwareMeta; artMeta?: RawArtMeta; designMeta?: RawDesignMeta;
-}
-
-// ─── Supabase row shapes ──────────────────────────────────────────────────────
-interface SupabaseProject {
-  id: string; title: string; category: string;
-  description?: string; tags?: string[]; featured?: boolean;
-  display_order?: number;
-}
-interface SupabaseImage   { image_url: string; display_order?: number; }
-interface SupabaseLink    { label: string; url: string; link_type: string; display_order?: number; }
-interface SupabaseSoftwareMeta {
-  tech_stack?: string[]; live_url?: string; repo_url?: string;
-  lighthouse_score?: number; page_load_ms?: number;
-  monthly_visitors?: number; uptime?: number; analytics_note?: string;
-}
-interface SupabaseArtMeta {
-  medium?: string; dimensions?: string; year?: number;
-  is_available?: boolean; price?: number; shop_url?: string;
-}
-interface SupabaseDesignMeta {
-  software?: string[]; client_name?: string; year?: number; behance_url?: string;
 }
 
 // ─── Meta normalizers ─────────────────────────────────────────────────────────
@@ -360,104 +341,20 @@ const EmptyState = ({ active }: { active: string }) => (
   </div>
 );
 
-
-// ─── Supabase full-project fetcher ───────────────────────────────────────────
-// TWO-PHASE approach to avoid Supabase response-size truncation on base64 images.
-//
-// Phase 1 — joined query for all small/text data (projects + links + meta).
-//           project_images is intentionally EXCLUDED here because base64
-//           image_url values can be 100–200 KB each; including them in a
-//           joined response causes PostgREST to silently truncate or drop rows.
-//
-// Phase 2 — a single flat query on project_images for ALL project ids at once,
-//           then group client-side. One extra round-trip, full fidelity.
-async function fetchAllProjectsFromSupabase(): Promise<Project[]> {
-
-  // ── Phase 1: projects + links + meta (NO images in join) ─────────────────
-  const { data: projs, error } = await supabase
-    .from("projects")
-    .select(
-      "*, project_links(label,url,link_type,display_order), " +
-      "software_meta(tech_stack,live_url,repo_url,lighthouse_score,page_load_ms,monthly_visitors,uptime,analytics_note), " +
-      "art_meta(medium,dimensions,year,is_available,price,shop_url), " +
-      "design_meta(software,client_name,year,behance_url)"
-    )
-    .order("display_order");
-
-  if (error) throw new Error(error.message);
-  if (!projs?.length) return [];
-
-  const projectIds = (projs as SupabaseProject[]).map(p => p.id);
-
-  // ── Phase 2: fetch all images in one flat query, group by project_id ─────
-  // Fetching images separately avoids the joined-response size cap that causes
-  // base64 strings (100-200 KB each) to be truncated or silently dropped.
-  const { data: allImages, error: imgErr } = await supabase
-    .from("project_images")
-    .select("project_id, image_url, display_order")
-    .in("project_id", projectIds)
-    .order("display_order");
-
-  if (imgErr) {
-    console.warn("[Portfolio] Could not fetch images:", imgErr.message);
+// ─── API project fetcher ─────────────────────────────────────────────────────
+// Fetches projects from the Express API backend with Prisma/Neon
+async function fetchAllProjectsFromAPI(): Promise<Project[]> {
+  try {
+    const response = await fetch(`${API_BASE}/api/projects`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const data: RawProject[] = await response.json();
+    return data.map(normalizeProject);
+  } catch (error) {
+    console.error("[Portfolio] API fetch error:", error);
+    throw error;
   }
-
-  // Group images by project_id for O(1) lookup when building project objects
-  const imagesByProject: Record<string, string[]> = {};
-  for (const img of (allImages ?? []) as (SupabaseImage & { project_id: string })[]) {
-    if (!img.image_url) continue;
-    if (!imagesByProject[img.project_id]) imagesByProject[img.project_id] = [];
-    imagesByProject[img.project_id].push(img.image_url);
-  }
-
-  return (projs as (SupabaseProject & {
-    project_links:  SupabaseLink[];
-    software_meta:  SupabaseSoftwareMeta | null;
-    art_meta:       SupabaseArtMeta | null;
-    design_meta:    SupabaseDesignMeta | null;
-  })[]).map(p => {
-    // Images come from Phase 2 grouping — already ordered by display_order
-    const images = imagesByProject[p.id] ?? [];
-
-    const links = (p.project_links ?? [])
-      .sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0))
-      .map(l => ({ label: l.label, url: l.url, link_type: l.link_type }));
-
-    return {
-      id:          p.id,
-      title:       p.title,
-      category:    normalizeCategory(p.category),
-      description: p.description ?? "",
-      tags:        p.tags ?? [],
-      featured:    p.featured ?? false,
-      images,
-      links,
-      softwareMeta: p.software_meta ? {
-        tech_stack:       p.software_meta.tech_stack       ?? [],
-        live_url:         p.software_meta.live_url,
-        repo_url:         p.software_meta.repo_url,
-        lighthouse_score: p.software_meta.lighthouse_score,
-        page_load_ms:     p.software_meta.page_load_ms,
-        monthly_visitors: p.software_meta.monthly_visitors,
-        uptime:           p.software_meta.uptime,
-        analytics_note:   p.software_meta.analytics_note,
-      } : undefined,
-      artMeta: p.art_meta ? {
-        medium:       p.art_meta.medium,
-        dimensions:   p.art_meta.dimensions,
-        year:         p.art_meta.year,
-        is_available: p.art_meta.is_available,
-        price:        p.art_meta.price,
-        shop_url:     p.art_meta.shop_url,
-      } : undefined,
-      designMeta: p.design_meta ? {
-        software:    p.design_meta.software   ?? [],
-        client_name: p.design_meta.client_name,
-        year:        p.design_meta.year,
-        behance_url: p.design_meta.behance_url,
-      } : undefined,
-    };
-  });
 }
 
 // ─── Main Portfolio ───────────────────────────────────────────────────────────
@@ -469,39 +366,24 @@ const Portfolio = () => {
   const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
-    const load = async () => {
+    const loadProjects = async () => {
       setLoading(true);
       setLoadError(null);
 
-      // ── Strategy 1: Express backend ──────────────────────────────────────
       try {
-        const res = await fetch(`${API_BASE}/projects`);
-        if (res.ok) {
-          const raw: RawProject[] = await res.json();
-          setProjects(raw.map(normalizeProject));
-          setLoading(false);
-          return;
-        }
-      } catch (_) {
-        // Backend unreachable — fall through to Supabase
-      }
-
-      // ── Strategy 2: Direct Supabase with joined query ────────────────────
-      // This single query fetches everything in one round-trip, including
-      // the full image_url values (base64 or remote) without truncation.
-      try {
-        const result = await fetchAllProjectsFromSupabase();
-        setProjects(result);
+        const projectsData = await fetchAllProjectsFromAPI();
+        setProjects(projectsData);
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Failed to load projects";
-        console.error("[Portfolio] Supabase fetch error:", err);
+        console.error("[Portfolio] Error loading projects:", err);
         setLoadError(msg);
         setProjects([]);
       } finally {
         setLoading(false);
       }
     };
-    load();
+
+    loadProjects();
   }, []);
 
   const filtered       = active === "All" ? projects : projects.filter(p => p.category === active);
@@ -576,6 +458,12 @@ const Portfolio = () => {
               <div className="text-center">
                 <p className="text-destructive font-mono text-sm mb-2">Failed to load projects</p>
                 <p className="text-muted-foreground font-body text-xs">{loadError}</p>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="mt-4 px-4 py-2 rounded-lg bg-primary text-primary-foreground font-mono text-xs hover:bg-primary/90 transition-colors"
+                >
+                  Retry
+                </button>
               </div>
             </div>
           ) : (
@@ -628,7 +516,7 @@ const Portfolio = () => {
                         )}
 
                         {/* Hover overlay */}
-                        <div className="absolute inset-0 bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center p-4 text-center">
+                         <div className="absolute inset-0 bg-black/85 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center p-4 text-center">
                           <Icon size={18} className={`${style.accent} mb-1.5`} />
                           <span className={`${style.accent} font-mono text-xs uppercase tracking-wider mb-1.5`}>{project.category}</span>
                           <h3 className="font-display font-bold text-foreground text-lg mb-1.5">{project.title}</h3>
