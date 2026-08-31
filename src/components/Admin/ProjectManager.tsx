@@ -45,11 +45,32 @@ interface Project {
   };
 }
 
+// ── API base resolution ──────────────────────────────────────────────────────
 // Normalized so it NEVER includes a trailing /api, regardless of whether
 // VITE_API_URL was set with or without it. Matches Portfolio.tsx's convention
 // — every fetch below appends /api/... explicitly.
+//
+// IMPORTANT: VITE_* env vars are baked into the bundle at BUILD time, not
+// runtime. If VITE_API_URL isn't set in your hosting provider's build
+// environment, this will silently fall back to localhost:3001 in production
+// and every request will fail. The check below surfaces that loudly instead
+// of failing silently.
 const RAW_API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 const API_BASE = RAW_API_BASE.replace(/\/$/, '').replace(/\/api$/, '');
+
+if (typeof window !== 'undefined') {
+  const isLocalHost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+  const apiIsLocalhost = /^(https?:\/\/)?(localhost|127\.0\.0\.1)/i.test(API_BASE);
+  if (!isLocalHost && apiIsLocalhost) {
+    // eslint-disable-next-line no-console
+    console.error(
+      `[ProjectManager] VITE_API_URL is not set for this deployment — API_BASE ` +
+      `resolved to "${API_BASE}", which is unreachable from a production browser. ` +
+      `Set VITE_API_URL in your hosting provider's build/environment settings to ` +
+      `your deployed backend's public URL (no trailing /api) and redeploy.`
+    );
+  }
+}
 
 const categories = ['WEB_DEV', 'DESIGN', 'FINE_ART', 'PHOTOGRAPHY'];
 const categoryLabels = {
@@ -81,7 +102,7 @@ const linkIcons = {
 };
 
 export const ProjectManager: React.FC = () => {
-  const { token, logout } = useAuth(); // was: const { token, signOut } = useAuth();
+  const { token, logout } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
@@ -121,7 +142,7 @@ export const ProjectManager: React.FC = () => {
       setLoading(true);
       setError(null);
       const response = await fetch(`${API_BASE}/api/projects`);
-      if (!response.ok) throw new Error('Failed to fetch projects');
+      if (!response.ok) throw new Error(`Failed to fetch projects (HTTP ${response.status})`);
       const data = await response.json();
       // Transform snake_case to camelCase for display
       const transformed = data.map((p: any) => ({
@@ -171,7 +192,8 @@ export const ProjectManager: React.FC = () => {
       setProjects(transformed);
     } catch (error) {
       console.error('Error fetching projects:', error);
-      setError('Failed to load projects. Please refresh the page.');
+      const detail = error instanceof Error ? error.message : String(error);
+      setError(`Failed to load projects. ${detail}`);
     } finally {
       setLoading(false);
     }
@@ -185,7 +207,6 @@ export const ProjectManager: React.FC = () => {
       description: data.description,
       tags: data.tags || [],
       featured: data.featured || false,
-      displayOrder: data.displayOrder || 0,
       images: (data.images || []).map(img => ({
         imageUrl: img.imageUrl,
         altText: img.altText || '',
@@ -277,15 +298,15 @@ export const ProjectManager: React.FC = () => {
 
       if (response.status === 401) {
         // Token expired or invalid
-        await logout(); // was: await signOut();
+        await logout();
         setError('Session expired. Please log in again.');
         setSaving(false);
         return;
       }
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to save project');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to save project (HTTP ${response.status})`);
       }
       
       await fetchProjects();
@@ -316,12 +337,12 @@ export const ProjectManager: React.FC = () => {
       });
 
       if (response.status === 401) {
-        await logout(); // was: await signOut();
+        await logout();
         setError('Session expired. Please log in again.');
         return;
       }
       
-      if (!response.ok) throw new Error('Failed to delete project');
+      if (!response.ok) throw new Error(`Failed to delete project (HTTP ${response.status})`);
       await fetchProjects();
       setSuccess('Project deleted successfully!');
       setTimeout(() => setSuccess(null), 3000);
@@ -356,35 +377,39 @@ export const ProjectManager: React.FC = () => {
       });
 
       if (response.status === 401) {
-        await logout(); // was: await signOut();
+        await logout();
         setError('Session expired. Please log in again.');
         setUploading(false);
         return;
       }
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Upload failed');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Upload failed (HTTP ${response.status})`);
       }
       
       const data = await response.json();
+      const uploadedFiles = Array.isArray(data?.files) ? data.files : [];
+      if (uploadedFiles.length === 0) {
+        throw new Error('Upload succeeded but the server returned no files.');
+      }
       
       // Add uploaded URLs to form data
       if (type === 'image') {
         setFormData(prev => ({
           ...prev,
-          images: [...(prev.images || []), ...data.files.map((f: any) => ({
+          images: [...(prev.images || []), ...uploadedFiles.map((f: any) => ({
             imageUrl: f.url.startsWith('http') ? f.url : `${API_BASE}${f.url}`,
-            altText: f.originalname.replace(/\.[^/.]+$/, ''),
+            altText: (f.originalname || '').replace(/\.[^/.]+$/, ''),
             displayOrder: (prev.images?.length || 0)
           }))]
         }));
       } else {
         setFormData(prev => ({
           ...prev,
-          videos: [...(prev.videos || []), ...data.files.map((f: any) => ({
+          videos: [...(prev.videos || []), ...uploadedFiles.map((f: any) => ({
             videoUrl: f.url.startsWith('http') ? f.url : `${API_BASE}${f.url}`,
-            title: f.originalname.replace(/\.[^/.]+$/, ''),
+            title: (f.originalname || '').replace(/\.[^/.]+$/, ''),
             description: '',
             displayOrder: (prev.videos?.length || 0)
           }))]
@@ -392,7 +417,7 @@ export const ProjectManager: React.FC = () => {
       }
     } catch (error) {
       console.error('Upload error:', error);
-      setError('Failed to upload files. Please try again.');
+      setError(error instanceof Error ? error.message : 'Failed to upload files. Please try again.');
     } finally {
       setUploading(false);
     }
@@ -725,10 +750,10 @@ export const ProjectManager: React.FC = () => {
                 Links
               </label>
               {(formData.links || []).map((link, index) => {
-                const LinkIcon = linkIcons[link.linkType as keyof typeof linkIcons] || ExternalLink;
+                const LinkIconComp = linkIcons[link.linkType as keyof typeof linkIcons] || ExternalLink;
                 return (
                   <div key={index} className="flex items-center gap-2 mb-2">
-                    <LinkIcon size={16} className="text-muted-foreground flex-shrink-0" />
+                    <LinkIconComp size={16} className="text-muted-foreground flex-shrink-0" />
                     <input
                       type="text"
                       placeholder="Label"
@@ -1214,10 +1239,10 @@ export const ProjectManager: React.FC = () => {
                             </h4>
                             <div className="space-y-1">
                               {project.links.map((link, i) => {
-                                const LinkIcon = linkIcons[link.linkType as keyof typeof linkIcons] || ExternalLink;
+                                const LinkIconComp = linkIcons[link.linkType as keyof typeof linkIcons] || ExternalLink;
                                 return (
                                   <div key={i} className="flex items-center gap-2 text-sm">
-                                    <LinkIcon size={14} className="text-muted-foreground" />
+                                    <LinkIconComp size={14} className="text-muted-foreground" />
                                     <span className="text-muted-foreground">{link.label}:</span>
                                     <a href={link.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline truncate">
                                       {link.url}

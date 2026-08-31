@@ -1,5 +1,4 @@
 // src/pages/Admin.tsx
-
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Loader2 } from "lucide-react";
@@ -7,8 +6,6 @@ import ProjectManager from "@/components/Admin/ProjectManager";
 
 const Admin = () => {
   const { user, isAdmin, loading } = useAuth();
-
-  console.log("🔍 Admin page - loading:", loading, "user:", user, "isAdmin:", isAdmin);
 
   // Show loading state
   if (loading) {
@@ -21,7 +18,6 @@ const Admin = () => {
 
   // Redirect if not authenticated or not admin
   if (!user || !isAdmin) {
-    console.log("🔀 Redirecting to auth from Admin page");
     return <Navigate to="/auth" replace />;
   }
 

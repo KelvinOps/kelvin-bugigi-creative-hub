@@ -12,8 +12,28 @@ import PageHeader from "@/components/PageHeader";
 // ── API base — normalized so it NEVER includes a trailing /api, regardless
 //    of whether VITE_API_URL was set with or without it. Every fetch below
 //    appends /api/... explicitly, matching ProjectManager.tsx's convention. ──
+//
+// IMPORTANT: VITE_* env vars are baked into the bundle at BUILD time, not
+// runtime. If VITE_API_URL isn't set in your hosting provider's build
+// environment, this falls back to localhost:3001 in production and every
+// request silently fails. The check below surfaces that loudly in the
+// browser console instead of failing silently with an empty portfolio.
 const RAW_API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3001";
 const API_BASE = RAW_API_BASE.replace(/\/$/, "").replace(/\/api$/, "");
+
+if (typeof window !== "undefined") {
+  const isLocalHost = ["localhost", "127.0.0.1"].includes(window.location.hostname);
+  const apiIsLocalhost = /^(https?:\/\/)?(localhost|127\.0\.0\.1)/i.test(API_BASE);
+  if (!isLocalHost && apiIsLocalhost) {
+    // eslint-disable-next-line no-console
+    console.error(
+      `[Portfolio] VITE_API_URL is not set for this deployment — API_BASE ` +
+      `resolved to "${API_BASE}", which is unreachable from a production browser. ` +
+      `Set VITE_API_URL in your hosting provider's build/environment settings to ` +
+      `your deployed backend's public URL (no trailing /api) and redeploy.`
+    );
+  }
+}
 
 // ── Image source resolver ─────────────────────────────────────────────────────
 // Handles three cases:

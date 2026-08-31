@@ -55,7 +55,13 @@ function InputField({
 }
 
 // ── Sign-in form ──────────────────────────────────────────────────────────────
-function SignInForm({ onSuccess }: { onSuccess: () => void }) {
+function SignInForm({
+  onSuccess,
+  switchToRegister,
+}: {
+  onSuccess: () => void;
+  switchToRegister: () => void;
+}) {
   const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -328,7 +334,7 @@ const Auth = () => {
     // Check auth status
     const isAuthed = checkAuth();
     console.log("🔍 Auth check on mount:", isAuthed, "user:", user, "isAdmin:", isAdmin);
-    
+
     if (!loading && user && isAdmin) {
       console.log("🔀 Redirecting to admin from Auth page (useEffect)");
       navigate("/admin", { replace: true });
@@ -399,12 +405,15 @@ const Auth = () => {
 
           <AnimatePresence mode="wait">
             {isLogin ? (
-              <SignInForm key="login" onSuccess={handleLoginSuccess} />
+              <SignInForm
+                key="login"
+                onSuccess={handleLoginSuccess}
+                switchToRegister={() => setIsLogin(false)}
+              />
             ) : (
               <RegisterForm key="register" switchToLogin={() => setIsLogin(true)} />
             )}
           </AnimatePresence>
-
         </div>
 
         <p className="text-center text-muted-foreground/40 font-mono text-[10px] mt-6 tracking-wider">
