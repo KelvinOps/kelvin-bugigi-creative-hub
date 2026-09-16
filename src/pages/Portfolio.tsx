@@ -9,93 +9,49 @@ import {
 } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
 
-// ── API base — normalized so it NEVER includes a trailing /api, regardless
-//    of whether VITE_API_URL was set with or without it. Every fetch below
-//    appends /api/... explicitly, matching ProjectManager.tsx's convention. ──
-//
-// IMPORTANT: VITE_* env vars are baked into the bundle at BUILD time, not
-// runtime. If VITE_API_URL isn't set in your hosting provider's build
-// environment, this falls back to localhost:3001 in production and every
-// request silently fails. The check below surfaces that loudly in the
-// browser console instead of failing silently with an empty portfolio.
-const RAW_API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3001";
-const API_BASE = RAW_API_BASE.replace(/\/$/, "").replace(/\/api$/, "");
-
-if (typeof window !== "undefined") {
-  const isLocalHost = ["localhost", "127.0.0.1"].includes(window.location.hostname);
-  const apiIsLocalhost = /^(https?:\/\/)?(localhost|127\.0\.0\.1)/i.test(API_BASE);
-  if (!isLocalHost && apiIsLocalhost) {
-    // eslint-disable-next-line no-console
-    console.error(
-      `[Portfolio] VITE_API_URL is not set for this deployment — API_BASE ` +
-      `resolved to "${API_BASE}", which is unreachable from a production browser. ` +
-      `Set VITE_API_URL in your hosting provider's build/environment settings to ` +
-      `your deployed backend's public URL (no trailing /api) and redeploy.`
-    );
-  }
-}
-
-// ── Image source resolver ─────────────────────────────────────────────────────
-// Handles three cases:
-//   1. base64 data URLs  → return as-is (no proxy needed, no CORS issues)
-//   2. blob: URLs        → return as-is
-//   3. http/https URLs   → route through server-side proxy to bypass CORP/CORS
+// ── Image source resolver ─────────────────────────────────────────────────
+// All requests are same-origin relative paths now — no base URL to resolve,
+// no CORS, no env var. Vercel's rewrite (see vercel.json) forwards /api/*
+// to the real backend transparently.
 function resolveImageSrc(src: string): string {
   if (!src || !src.trim()) return "";
   const trimmed = src.trim();
-  // Base64 data URLs and blob URLs never need proxying
   if (trimmed.startsWith("data:") || trimmed.startsWith("blob:")) return trimmed;
-  // Remote URLs go through the proxy
   if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
-    return `${API_BASE}/api/image-proxy?url=${encodeURIComponent(trimmed)}`;
+    return `/api/image-proxy?url=${encodeURIComponent(trimmed)}`;
   }
   return trimmed;
 }
 
-// ── Check if a URL is a base64 data URL ──────────────────────────────────────
 function isDataUrl(src: string): boolean {
   return src.trim().startsWith("data:");
 }
 
 const filters = ["All", "Web Dev", "Design", "Fine Art", "Photography"];
 
-// ─── Category normalisation ───────────────────────────────────────────────────
 const PRISMA_TO_DISPLAY: Record<string, string> = {
-  WEB_DEV:       "Web Dev",
-  DESIGN:        "Design",
-  FINE_ART:      "Fine Art",
-  PHOTOGRAPHY:   "Photography",
-  "Web Dev":     "Web Dev",
-  "Design":      "Design",
-  "Fine Art":    "Fine Art",
-  "Photography": "Photography",
+  WEB_DEV: "Web Dev", DESIGN: "Design", FINE_ART: "Fine Art", PHOTOGRAPHY: "Photography",
+  "Web Dev": "Web Dev", "Design": "Design", "Fine Art": "Fine Art", "Photography": "Photography",
 };
-
 function normalizeCategory(raw: string): string {
   return PRISMA_TO_DISPLAY[raw] ?? raw;
 }
 
-// ─── Style map ────────────────────────────────────────────────────────────────
 interface CategoryStyle {
   accent: string; bg: string; border: string; badge: string; icon: LucideIcon;
 }
-
 const categoryStyles: Record<string, CategoryStyle> = {
   "Web Dev":     { accent: "text-amber-400",  bg: "bg-amber-500/10",  border: "border-amber-500/30",  badge: "bg-amber-500/15 text-amber-300",   icon: Code    },
   "Design":      { accent: "text-cyan-400",   bg: "bg-cyan-500/10",   border: "border-cyan-500/30",   badge: "bg-cyan-500/15 text-cyan-300",     icon: Palette },
   "Fine Art":    { accent: "text-rose-400",   bg: "bg-rose-500/10",   border: "border-rose-500/30",   badge: "bg-rose-500/15 text-rose-300",     icon: PenTool },
   "Photography": { accent: "text-violet-400", bg: "bg-violet-500/10", border: "border-violet-500/30", badge: "bg-violet-500/15 text-violet-300", icon: Camera  },
 };
-
 const FALLBACK_STYLE: CategoryStyle = categoryStyles["Web Dev"];
-
 function getStyle(category: string): CategoryStyle {
   return categoryStyles[normalizeCategory(category)] ?? FALLBACK_STYLE;
 }
 
-// ─── Domain interfaces ────────────────────────────────────────────────────────
 interface ProjectLink { label: string; url: string; link_type: string; }
-
 interface SoftwareMeta {
   tech_stack?: string[]; live_url?: string; repo_url?: string;
   lighthouse_score?: number; page_load_ms?: number;
@@ -108,7 +64,6 @@ interface ArtMeta {
 interface DesignMeta {
   software?: string[]; client_name?: string; year?: number; behance_url?: string;
 }
-
 interface Project {
   id: string; title: string;
   category: string;
@@ -118,10 +73,8 @@ interface Project {
   softwareMeta?: SoftwareMeta; artMeta?: ArtMeta; designMeta?: DesignMeta;
 }
 
-// ─── Raw API shapes ───────────────────────────────────────────────────────────
 interface RawImage { imageUrl?: string; image_url?: string; }
 interface RawLink  { label: string; url: string; linkType?: string; link_type?: string; }
-
 interface RawSoftwareMeta {
   techStack?: string[];     tech_stack?: string[];
   liveUrl?: string;         live_url?: string;
@@ -150,7 +103,6 @@ interface RawProject {
   softwareMeta?: RawSoftwareMeta; artMeta?: RawArtMeta; designMeta?: RawDesignMeta;
 }
 
-// ─── Meta normalizers ─────────────────────────────────────────────────────────
 function normalizeSoftwareMeta(m: RawSoftwareMeta): SoftwareMeta {
   return {
     tech_stack:       m.techStack       ?? m.tech_stack       ?? [],
@@ -178,24 +130,16 @@ function normalizeDesignMeta(m: RawDesignMeta): DesignMeta {
     behance_url: m.behanceUrl ?? m.behance_url,
   };
 }
-
-// ─── Project normalizer ───────────────────────────────────────────────────────
 function normalizeProject(p: RawProject): Project {
   const images = (p.images ?? [])
     .map(img => (img.imageUrl ?? img.image_url ?? "").trim())
     .filter(Boolean);
-
   return {
-    id:           p.id,
-    title:        p.title,
-    category:     normalizeCategory(p.category),
-    description:  p.description ?? "",
-    tags:         p.tags ?? [],
-    featured:     p.featured ?? false,
+    id: p.id, title: p.title, category: normalizeCategory(p.category),
+    description: p.description ?? "", tags: p.tags ?? [], featured: p.featured ?? false,
     images,
     links: (p.links ?? []).map(l => ({
-      label:     l.label,
-      url:       l.url,
+      label: l.label, url: l.url,
       link_type: (l.linkType ?? l.link_type ?? "other").toLowerCase(),
     })),
     softwareMeta: p.softwareMeta ? normalizeSoftwareMeta(p.softwareMeta) : undefined,
@@ -204,38 +148,22 @@ function normalizeProject(p: RawProject): Project {
   };
 }
 
-// ─── Resolve live URL ─────────────────────────────────────────────────────────
-// Priority: softwareMeta.live_url -> designMeta.behance_url -> artMeta.shop_url
-//           -> link typed "live" -> link typed "demo" -> link typed "shop"
-//           -> link typed "other" -> first available link (any type)
-// This ensures the CTA button always appears when any link exists.
 function resolveLiveUrl(project: Project): string | undefined {
   if (project.softwareMeta?.live_url)                                return project.softwareMeta.live_url;
   if (project.designMeta?.behance_url)                               return project.designMeta.behance_url;
   if (project.artMeta?.shop_url && project.artMeta.shop_url !== "#") return project.artMeta.shop_url;
   const byType = (t: string) => project.links.find(l => l.link_type === t)?.url;
-  return (
-    byType("live")  ??
-    byType("demo")  ??
-    byType("shop")  ??
-    byType("other") ??
-    project.links[0]?.url
-  );
+  return byType("live") ?? byType("demo") ?? byType("shop") ?? byType("other") ?? project.links[0]?.url;
 }
-
-// ─── Resolve the label for the primary CTA button ────────────────────────────
 function resolvePrimaryLinkLabel(project: Project, liveUrl: string): string {
-  // If the URL came from a named link, use that link's label
   const matchedLink = project.links.find(l => l.url === liveUrl);
   if (matchedLink?.label) return matchedLink.label;
-  // Otherwise fall back to category-specific defaults
   if (project.category === "Fine Art")    return "View / Purchase";
   if (project.category === "Photography") return "View Gallery";
   if (project.category === "Design")      return "View Project";
   return "Visit Live Site";
 }
 
-// ─── Link icon ────────────────────────────────────────────────────────────────
 const linkIcon = (type: string) => {
   switch (type) {
     case "live": return <ArrowUpRight size={14} />;
@@ -246,76 +174,38 @@ const linkIcon = (type: string) => {
   }
 };
 
-// ─── Smart Image component ────────────────────────────────────────────────────
-// Handles base64 data URLs directly (no proxy, no CORS issues).
-// For remote URLs, tries proxy first then falls back to direct.
 function SafeImage({
   src, alt, className, fallback,
 }: {
   src: string; alt: string; className: string; fallback: React.ReactNode;
 }) {
-  // Determine initial strategy based on URL type
   const isBase64 = isDataUrl(src);
   const resolved = resolveImageSrc(src);
-
   type ImgState = "base64" | "proxied" | "direct" | "error";
   const initialState: ImgState = isBase64 ? "base64" : "proxied";
   const [state, setState] = useState<ImgState>(initialState);
 
-  // Reset state when src changes
   useEffect(() => {
     if (!src) { setState("error"); return; }
     setState(isDataUrl(src) ? "base64" : "proxied");
   }, [src]);
 
   const handleProxyError = () => {
-    // Proxy failed — try the raw URL directly
-    if (src && src !== resolved) {
-      setState("direct");
-    } else {
-      setState("error");
-    }
+    if (src && src !== resolved) setState("direct");
+    else setState("error");
   };
 
   if (!src || state === "error") return <>{fallback}</>;
 
-  // Base64 data URLs: render directly, no proxy, no CORS
   if (state === "base64") {
-    return (
-      <img
-        src={src}
-        alt={alt}
-        className={className}
-        onError={() => setState("error")}
-      />
-    );
+    return <img src={src} alt={alt} className={className} onError={() => setState("error")} />;
   }
-
-  // Direct fallback for remote URLs when proxy fails
   if (state === "direct") {
-    return (
-      <img
-        src={src}
-        alt={alt}
-        className={className}
-        onError={() => setState("error")}
-        crossOrigin="anonymous"
-      />
-    );
+    return <img src={src} alt={alt} className={className} onError={() => setState("error")} crossOrigin="anonymous" />;
   }
-
-  // Default: proxied remote URL
-  return (
-    <img
-      src={resolved}
-      alt={alt}
-      className={className}
-      onError={handleProxyError}
-    />
-  );
+  return <img src={resolved} alt={alt} className={className} onError={handleProxyError} />;
 }
 
-// ─── Badge strips ─────────────────────────────────────────────────────────────
 const AnalyticsBadges = ({ meta }: { meta: SoftwareMeta }) => (
   <div className="flex flex-wrap gap-1.5 mt-2">
     {meta.lighthouse_score != null && <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-300 font-mono text-xs"><Zap size={10} /> LH {meta.lighthouse_score}</span>}
@@ -348,7 +238,6 @@ const PhotographyBadges = ({ meta }: { meta: DesignMeta }) => (
   </div>
 );
 
-// ─── Empty state ──────────────────────────────────────────────────────────────
 const EmptyState = ({ active }: { active: string }) => (
   <div className="col-span-12 flex flex-col items-center justify-center py-16 text-center">
     <div className="w-14 h-14 rounded-2xl bg-secondary flex items-center justify-center mb-3">
@@ -361,23 +250,19 @@ const EmptyState = ({ active }: { active: string }) => (
   </div>
 );
 
-// ─── API project fetcher ─────────────────────────────────────────────────────
-// Fetches projects from the Express API backend with Prisma/Neon
+// ── API project fetcher ──────────────────────────────────────────────────
+// Relative path only. Same-origin in the browser at all times — dev server
+// proxies it (see vite.config.ts), production Vercel rewrites it
+// (see vercel.json). No env var, no hardcoded host, no CORS.
 async function fetchAllProjectsFromAPI(): Promise<Project[]> {
-  try {
-    const response = await fetch(`${API_BASE}/api/projects`);
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    const data: RawProject[] = await response.json();
-    return data.map(normalizeProject);
-  } catch (error) {
-    console.error("[Portfolio] API fetch error:", error);
-    throw error;
+  const response = await fetch("/api/projects");
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
   }
+  const data: RawProject[] = await response.json();
+  return data.map(normalizeProject);
 }
 
-// ─── Main Portfolio ───────────────────────────────────────────────────────────
 const Portfolio = () => {
   const [active,   setActive]   = useState("All");
   const [lightbox, setLightbox] = useState<{ projectIdx: number; imageIdx: number } | null>(null);
@@ -389,7 +274,6 @@ const Portfolio = () => {
     const loadProjects = async () => {
       setLoading(true);
       setLoadError(null);
-
       try {
         const projectsData = await fetchAllProjectsFromAPI();
         setProjects(projectsData);
@@ -402,7 +286,6 @@ const Portfolio = () => {
         setLoading(false);
       }
     };
-
     loadProjects();
   }, []);
 
@@ -416,7 +299,6 @@ const Portfolio = () => {
       setLightbox({ ...lightbox, imageIdx: next });
   }, [lightbox, currentProject]);
 
-  // Keyboard navigation for lightbox
   useEffect(() => {
     if (!lightbox) return;
     const onKey = (e: KeyboardEvent) => {
@@ -440,14 +322,12 @@ const Portfolio = () => {
         section="Portfolio" sectionNumber="03" title="Portfolio"
         subtitle="A curated selection of projects spanning web development, graphic design, and fine art."
       />
-
       <section className="py-10">
         <div className="container mx-auto px-4">
           <div className="text-center mb-3">
             <span className="text-muted-foreground font-mono text-xs tracking-widest uppercase">Selected Work</span>
           </div>
 
-          {/* Filters */}
           <div className="flex justify-center gap-1.5 mb-8 flex-wrap">
             {filters.map(f => {
               const style = categoryStyles[f];
@@ -502,7 +382,6 @@ const Portfolio = () => {
                       exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.3, delay: i * 0.05 }}
                       className={`group relative rounded-2xl overflow-hidden bg-card border ${style.border} hover:border-opacity-80 transition-all col-span-12 ${getSpan(project, i)}`}
                     >
-                      {/* Image area */}
                       <div
                         className="aspect-[16/10] overflow-hidden cursor-pointer relative"
                         onClick={() => setLightbox({ projectIdx: i, imageIdx: 0 })}
@@ -535,8 +414,7 @@ const Portfolio = () => {
                           </div>
                         )}
 
-                        {/* Hover overlay */}
-                         <div className="absolute inset-0 bg-black/85 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center p-4 text-center">
+                        <div className="absolute inset-0 bg-black/85 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center p-4 text-center">
                           <Icon size={18} className={`${style.accent} mb-1.5`} />
                           <span className={`${style.accent} font-mono text-xs uppercase tracking-wider mb-1.5`}>{project.category}</span>
                           <h3 className="font-display font-bold text-foreground text-lg mb-1.5">{project.title}</h3>
@@ -562,7 +440,6 @@ const Portfolio = () => {
                         </div>
                       </div>
 
-                      {/* Card footer */}
                       <div className="p-3 border-t border-border">
                         <div className="flex items-start justify-between gap-2 mb-2">
                           <div className="min-w-0 flex-1">
@@ -575,7 +452,6 @@ const Portfolio = () => {
                             {project.category === "Photography" && project.designMeta   && <PhotographyBadges meta={project.designMeta}   />}
                           </div>
 
-                          {/* Icon-only link buttons (repo, demo, etc.) */}
                           <div className="flex items-center gap-1 flex-shrink-0 mt-1">
                             {project.links
                               .filter(l => l.link_type !== "live" && l.link_type !== "demo")
@@ -591,7 +467,6 @@ const Portfolio = () => {
                           </div>
                         </div>
 
-                        {/* Prominent live site / primary CTA button */}
                         {liveUrl && (
                           <a
                             href={liveUrl}
@@ -614,7 +489,6 @@ const Portfolio = () => {
         </div>
       </section>
 
-      {/* Lightbox */}
       <AnimatePresence>
         {lightbox !== null && currentProject && (() => {
           const cs = getStyle(currentProject.category);
@@ -634,7 +508,6 @@ const Portfolio = () => {
                 className={`bg-card border ${cs.border} rounded-2xl overflow-hidden max-w-5xl w-full max-h-[92vh] flex flex-col md:flex-row`}
                 onClick={e => e.stopPropagation()}
               >
-                {/* Image side */}
                 <div className="md:w-3/5 flex-shrink-0 relative bg-background/50">
                   {currentProject.images.length > 0 ? (
                     <AnimatePresence mode="wait">
@@ -682,7 +555,6 @@ const Portfolio = () => {
                   )}
                 </div>
 
-                {/* Info side */}
                 <div className="p-4 md:p-5 flex flex-col justify-between md:w-2/5 overflow-y-auto">
                   <div>
                     <div className="flex items-center gap-2 mb-1">
@@ -745,7 +617,6 @@ const Portfolio = () => {
                     </div>
                   </div>
 
-                  {/* Links */}
                   <div className="flex flex-col gap-1.5">
                     {currentProject.links.map((link, li) => (
                       <a key={li} href={link.url} target="_blank" rel="noopener noreferrer"

@@ -5,7 +5,7 @@ import { Navigate, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Eye, EyeOff, Lock, Mail, AlertCircle,
-  ShieldCheck, Fingerprint, UserPlus, LogIn, User,
+  ShieldCheck, UserPlus, LogIn, User,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -87,19 +87,29 @@ function SignInForm({
       return;
     }
 
-    const result = await login(email.trim(), password);
+    try {
+      const result = await login(email.trim(), password);
 
-    if (result.success) {
-      setSuccess(true);
-      // Call the onSuccess callback to handle navigation
-      setTimeout(() => {
-        onSuccess();
-      }, 300);
-    } else {
-      setError(result.error || "Login failed. Please try again.");
+      if (result.success) {
+        setSuccess(true);
+        setTimeout(() => {
+          onSuccess();
+        }, 300);
+      } else {
+        setError(result.error || "Login failed. Please try again.");
+      }
+    } catch (err) {
+      // A thrown error here means the request never completed cleanly —
+      // usually the API is down or the route crashed. Say so, rather than
+      // implying the credentials were wrong.
+      setError(
+        err instanceof Error
+          ? `Could not reach the server: ${err.message}`
+          : "Could not reach the server."
+      );
+    } finally {
+      setSubmitting(false);
     }
-
-    setSubmitting(false);
   };
 
   return (
@@ -175,6 +185,7 @@ function SignInForm({
           </>
         )}
       </button>
+
     </motion.form>
   );
 }
@@ -207,22 +218,30 @@ function RegisterForm({ switchToLogin }: { switchToLogin: () => void }) {
       return;
     }
 
-    const result = await register(email.trim(), password, name.trim() || undefined);
+    try {
+      const result = await register(email.trim(), password, name.trim() || undefined);
 
-    if (result.success) {
-      setSuccess(true);
-      setEmail("");
-      setPassword("");
-      setName("");
-      setTimeout(() => {
-        setSuccess(false);
-        switchToLogin();
-      }, 2000);
-    } else {
-      setError(result.error || "Registration failed. Please try again.");
+      if (result.success) {
+        setSuccess(true);
+        setEmail("");
+        setPassword("");
+        setName("");
+        setTimeout(() => {
+          setSuccess(false);
+          switchToLogin();
+        }, 2000);
+      } else {
+        setError(result.error || "Registration failed. Please try again.");
+      }
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? `Could not reach the server: ${err.message}`
+          : "Could not reach the server."
+      );
+    } finally {
+      setSubmitting(false);
     }
-
-    setSubmitting(false);
   };
 
   return (
@@ -272,6 +291,12 @@ function RegisterForm({ switchToLogin }: { switchToLogin: () => void }) {
           </button>
         }
       />
+
+      <p className="text-xs text-muted-foreground/70 leading-relaxed">
+        Only the address configured as ADMIN_EMAIL on the server is granted admin
+        access. Registering any other address creates an account with no
+        privileges.
+      </p>
 
       {error && (
         <motion.div
@@ -325,34 +350,24 @@ function RegisterForm({ switchToLogin }: { switchToLogin: () => void }) {
 
 // ── Page shell ────────────────────────────────────────────────────────────────
 const Auth = () => {
-  const { user, isAdmin, loading, checkAuth } = useAuth();
+  const { user, isAdmin, loading } = useAuth();
   const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
 
-  // Check if already logged in
+  // Redirect once auth state settles. `checkAuth` was previously called inside
+  // this effect *and* listed as a dependency — if it isn't memoised in
+  // AuthContext, that re-runs the effect on every render.
   useEffect(() => {
-    // Check auth status
-    const isAuthed = checkAuth();
-    console.log("🔍 Auth check on mount:", isAuthed, "user:", user, "isAdmin:", isAdmin);
-
     if (!loading && user && isAdmin) {
-      console.log("🔀 Redirecting to admin from Auth page (useEffect)");
       navigate("/admin", { replace: true });
     }
-  }, [loading, user, isAdmin, navigate, checkAuth]);
+  }, [loading, user, isAdmin, navigate]);
 
-  // Handle successful login
   const handleLoginSuccess = () => {
-    console.log("🎯 Login success callback - navigating to admin");
-    // Force a check of auth status
-    checkAuth();
-    // Navigate to admin
     navigate("/admin", { replace: true });
   };
 
-  // Redirect if already logged in and is admin (for the render)
   if (!loading && user && isAdmin) {
-    console.log("🔀 Redirecting to admin from Auth page (render)");
     return <Navigate to="/admin" replace />;
   }
 

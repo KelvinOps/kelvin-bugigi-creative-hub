@@ -1,5 +1,10 @@
 // server/index.ts — security-hardened with role verification, helmet, rate limiting
 // + image proxy endpoint to bypass browser CORS/CORP restrictions
+//
+// FIXED: auth routes now use the typed Prisma client (via server/lib/prisma.ts)
+// instead of raw SQL against a literal "User" table, which does not exist
+// (the real table is "users", mapped via @@map in schema.prisma). Registration
+// is now locked to a single admin account.
 import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import helmet from "helmet";
@@ -7,53 +12,34 @@ import rateLimit from "express-rate-limit";
 import https from "https";
 import http from "http";
 import { URL } from "url";
-import { PrismaClient, Category as PrismaCategory, LinkType as PrismaLinkType } from "../src/generated/prisma";
-import { PrismaPg } from "@prisma/adapter-pg";
-import pg from "pg";
+import { Category as PrismaCategory, LinkType as PrismaLinkType } from "../src/generated/prisma";
 import * as dotenv from "dotenv";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
 
+import { prisma, pool } from "./lib/prisma";
+import {
+  requireAdmin,
+  hashPassword,
+  comparePassword,
+  signToken,
+  verifyJwt,
+  AuthenticatedRequest,
+} from "./lib/auth";
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 dotenv.config();
 
-// ── DB ────────────────────────────────────────────────────────────────────────
-const connectionString = process.env.DATABASE_URL;
-if (!connectionString) {
-  console.error("❌ DATABASE_URL is not set in environment variables");
-  process.exit(1);
-}
-
-// Create a connection pool for Neon with proper SSL configuration
-const pool = new pg.Pool({
-  connectionString,
-  ssl: {
-    rejectUnauthorized: false, // Required for Neon
-  },
-  max: 20,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 10000,
-});
-
-// Handle pool errors
-pool.on('error', (err) => {
-  console.error('❌ Unexpected database pool error:', err);
-});
-
-// Create the Prisma adapter
-const adapter = new PrismaPg(pool);
-const prisma = new PrismaClient({ adapter });
-
-// Test database connection on startup
+// ── DB connection check on startup ─────────────────────────────────────────────
 async function testDatabaseConnection() {
   try {
     await prisma.$connect();
     console.log('✅ Connected to Neon database via Prisma');
-    
+
     const result = await prisma.$queryRaw`SELECT NOW() as current_time, version() as pg_version`;
     console.log(`📊 PostgreSQL version: ${(result as any[])[0].pg_version}`);
     console.log(`🕐 Server time: ${(result as any[])[0].current_time}`);
@@ -99,13 +85,13 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
-  limits: { 
+  limits: {
     fileSize: 10 * 1024 * 1024, // 10MB limit
     files: 10 // Max 10 files per upload
   },
   fileFilter: (req, file, cb) => {
     const allowedTypes = [
-      'image/jpeg', 'image/png', 'image/gif', 'image/webp', 
+      'image/jpeg', 'image/png', 'image/gif', 'image/webp',
       'image/svg+xml', 'image/avif',
       'video/mp4', 'video/webm', 'video/ogg'
     ];
@@ -127,15 +113,8 @@ app.use(
     contentSecurityPolicy: {
       directives: {
         defaultSrc:  ["'self'"],
-        imgSrc: [
-          "'self'",
-          "data:",
-          "blob:",
-          "https:",
-        ],
-        connectSrc: [
-          "'self'",
-        ],
+        imgSrc: ["'self'", "data:", "blob:", "https:"],
+        connectSrc: ["'self'"],
         scriptSrc:  ["'self'"],
         styleSrc:   ["'self'", "'unsafe-inline'"],
         fontSrc:    ["'self'", "https:", "data:"],
@@ -164,8 +143,8 @@ const allowedOrigins = [
   process.env.FRONTEND_URL,
 ].filter((o): o is string => Boolean(o));
 
-app.use(cors({ 
-  origin: allowedOrigins, 
+app.use(cors({
+  origin: allowedOrigins,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
@@ -178,8 +157,8 @@ app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 // ── Static Files ──────────────────────────────────────────────────────────────
 app.use('/uploads', express.static(path.join(__dirname, '../uploads'), {
   maxAge: '1y',
-  setHeaders: (res, path) => {
-    if (path.match(/\.(jpg|jpeg|png|gif|webp|avif|svg)$/)) {
+  setHeaders: (res, filePath) => {
+    if (filePath.match(/\.(jpg|jpeg|png|gif|webp|avif|svg)$/)) {
       res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
     }
   }
@@ -202,6 +181,12 @@ const adminLimiter = rateLimit({
   message: { error: "Rate limit reached. Slow down." },
 });
 
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { error: "Too many auth attempts. Try again later." },
+});
+
 const proxyLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 500,
@@ -209,11 +194,6 @@ const proxyLimiter = rateLimit({
 });
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-interface AuthenticatedRequest extends Request {
-  userId?: string;
-  userEmail?: string;
-}
-
 interface IncomingSoftwareMeta {
   tech_stack?: string[];    techStack?: string[];
   live_url?: string | null; liveUrl?: string | null;
@@ -327,92 +307,20 @@ function normalizeCategoryLabel(category: string): string {
   return CATEGORY_KEY_TO_LABEL[category] ?? category;
 }
 
-// ── Authentication Helpers ────────────────────────────────────────────────────
-
-// Generate a simple JWT token (in production, use jsonwebtoken library)
-function generateToken(user: any): string {
-  const payload = {
-    sub: user.id,
-    email: user.email,
-    role: user.role || 'USER',
-    exp: Math.floor(Date.now() / 1000) + (60 * 60 * 8) // 8 hours
-  };
-  return Buffer.from(JSON.stringify(payload)).toString('base64');
-}
-
-// Verify token
-async function verifyToken(token: string): Promise<any> {
-  try {
-    const payload = JSON.parse(Buffer.from(token, 'base64').toString());
-    if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) {
-      return null;
-    }
-    return payload;
-  } catch {
-    return null;
-  }
-}
-
-// ── Auth middleware ───────────────────────────────────────────────────────────
-async function requireAdmin(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
-  try {
-    const token = req.headers.authorization?.split(" ")[1];
-    if (!token) { 
-      res.status(401).json({ error: "Unauthorized - No token provided" }); 
-      return; 
-    }
-
-    const payload = await verifyToken(token);
-    if (!payload) {
-      res.status(401).json({ error: "Invalid or expired token" });
-      return;
-    }
-
-    // Check if user is admin by email or role
-    if (payload.email === ADMIN_EMAIL || payload.role === "ADMIN") {
-      req.userId = payload.sub;
-      req.userEmail = payload.email;
-      next();
-      return;
-    }
-
-    // Double-check in database
-    try {
-      const users = await prisma.$queryRaw`
-        SELECT role FROM "User" WHERE email = ${payload.email}
-      `;
-      const userArray = users as any[];
-      if (userArray.length > 0 && userArray[0].role === "ADMIN") {
-        req.userId = payload.sub;
-        req.userEmail = payload.email;
-        next();
-        return;
-      }
-    } catch (dbError) {
-      console.warn('Database admin check failed:', dbError);
-    }
-
-    res.status(403).json({ error: "Forbidden — admin access required" });
-  } catch (error) {
-    console.error("Auth error:", error);
-    res.status(401).json({ error: "Authentication failed" });
-  }
-}
-
 // ── Public endpoints ──────────────────────────────────────────────────────────
 app.get("/api/health", async (_req, res) => {
   try {
     await prisma.$queryRaw`SELECT 1`;
-    res.json({ 
-      status: "ok", 
+    res.json({
+      status: "ok",
       timestamp: new Date().toISOString(),
       database: "connected",
       uptime: process.uptime(),
       auth: "jwt"
     });
   } catch (error) {
-    res.status(500).json({ 
-      status: "error", 
+    res.status(500).json({
+      status: "error",
       timestamp: new Date().toISOString(),
       database: "disconnected",
       error: error instanceof Error ? error.message : "Unknown error"
@@ -421,9 +329,13 @@ app.get("/api/health", async (_req, res) => {
 });
 
 // ── Authentication endpoints ──────────────────────────────────────────────────
+// All of these now go through the typed Prisma client (prisma.user.*), which
+// correctly resolves to the real "users" table via @@map("users") in schema.prisma.
+// The previous code used raw SQL against a literal "User" table that never
+// existed, which is what threw the 42P01 / P2010 errors.
 
-// ── Login endpoint ───────────────────────────────────────────────────────────
-app.post("/api/auth/login", async (req: Request, res: Response): Promise<void> => {
+// ── Login ─────────────────────────────────────────────────────────────────────
+app.post("/api/auth/login", authLimiter, async (req: Request, res: Response): Promise<void> => {
   try {
     const { email, password } = req.body;
 
@@ -432,43 +344,30 @@ app.post("/api/auth/login", async (req: Request, res: Response): Promise<void> =
       return;
     }
 
-    const normEmail = email.toLowerCase();
+    const normEmail = String(email).toLowerCase();
 
-    // Check if user exists in database
-    const users = await prisma.$queryRaw`
-      SELECT * FROM "User" WHERE email = ${normEmail}
-    `;
-    
-    const userArray = users as any[];
-    if (userArray.length === 0) {
+    const user = await prisma.user.findUnique({ where: { email: normEmail } });
+    if (!user) {
       res.status(401).json({ error: "Invalid credentials" });
       return;
     }
 
-    const user = userArray[0];
-
-    // In production, compare hashed passwords with bcrypt
-    // For now, we'll do a simple check
-    if (password !== user.password && password !== "admin123") {
+    const valid = await comparePassword(password, user.password);
+    if (!valid) {
       res.status(401).json({ error: "Invalid credentials" });
       return;
     }
 
-    // Generate token
-    const token = generateToken({
-      id: user.id,
-      email: user.email,
-      role: user.role || 'USER'
-    });
+    const token = signToken({ id: user.id, email: user.email, role: user.role });
 
     res.json({
       token,
       user: {
         id: user.id,
         email: user.email,
-        name: user.name || null,
-        role: user.role || 'USER'
-      }
+        name: user.name ?? null,
+        role: user.role,
+      },
     });
   } catch (error) {
     console.error("Login error:", error);
@@ -476,7 +375,7 @@ app.post("/api/auth/login", async (req: Request, res: Response): Promise<void> =
   }
 });
 
-// ── Verify token endpoint ────────────────────────────────────────────────────
+// ── Verify token ──────────────────────────────────────────────────────────────
 app.get("/api/auth/verify", async (req: Request, res: Response): Promise<void> => {
   try {
     const token = req.headers.authorization?.split(" ")[1];
@@ -485,31 +384,25 @@ app.get("/api/auth/verify", async (req: Request, res: Response): Promise<void> =
       return;
     }
 
-    const payload = await verifyToken(token);
+    const payload = verifyJwt(token);
     if (!payload) {
       res.status(401).json({ error: "Invalid or expired token" });
       return;
     }
 
-    // Get fresh user data from database
-    const users = await prisma.$queryRaw`
-      SELECT id, email, name, role FROM "User" WHERE email = ${payload.email}
-    `;
-    
-    const userArray = users as any[];
-    if (userArray.length === 0) {
+    const user = await prisma.user.findUnique({ where: { id: payload.sub } });
+    if (!user) {
       res.status(401).json({ error: "User not found" });
       return;
     }
 
-    const user = userArray[0];
     res.json({
       user: {
         id: user.id,
         email: user.email,
-        name: user.name || null,
-        role: user.role || 'USER'
-      }
+        name: user.name ?? null,
+        role: user.role,
+      },
     });
   } catch (error) {
     console.error("Verify error:", error);
@@ -517,8 +410,8 @@ app.get("/api/auth/verify", async (req: Request, res: Response): Promise<void> =
   }
 });
 
-// ── Register endpoint ─────────────────────────────────────────────────────────
-app.post("/api/auth/register", async (req: Request, res: Response): Promise<void> => {
+// ── Register — locked to a single, one-time admin account ────────────────────
+app.post("/api/auth/register", authLimiter, async (req: Request, res: Response): Promise<void> => {
   try {
     const { email, password, name } = req.body;
 
@@ -526,50 +419,47 @@ app.post("/api/auth/register", async (req: Request, res: Response): Promise<void
       res.status(400).json({ error: "Email and password required" });
       return;
     }
-
-    const normEmail = email.toLowerCase();
-
-    // Check if user already exists
-    const existingUsers = await prisma.$queryRaw`
-      SELECT * FROM "User" WHERE email = ${normEmail}
-    `;
-    
-    const existingArray = existingUsers as any[];
-    if (existingArray.length > 0) {
-      res.status(400).json({ error: "User already exists with this email" });
+    if (String(password).length < 8) {
+      res.status(400).json({ error: "Password must be at least 8 characters" });
       return;
     }
 
-    // Check if this is the admin email - make them admin
-    const isAdmin = normEmail === "kbugigi@gmail.com";
-    const role = isAdmin ? "ADMIN" : "USER";
+    const normEmail = String(email).toLowerCase();
 
-    // Create new user
-    const newUser = await prisma.$queryRaw`
-      INSERT INTO "User" (id, email, password, name, role)
-      VALUES (gen_random_uuid()::text, ${normEmail}, ${password}, ${name || normEmail.split('@')[0]}, ${role})
-      RETURNING id, email, name, role
-    `;
-
-    const userArray = newUser as any[];
-    if (userArray.length === 0) {
-      res.status(500).json({ error: "Failed to create user" });
+    // Hard lock: once ANY user exists, registration is closed for good.
+    const existingCount = await prisma.user.count();
+    if (existingCount > 0) {
+      res.status(403).json({ error: "Registration is closed. This site has a single owner account." });
       return;
     }
 
-    const user = userArray[0];
+    // Only the designated admin email may ever create the one account.
+    if (normEmail !== ADMIN_EMAIL) {
+      res.status(403).json({ error: "Only the site owner can register." });
+      return;
+    }
 
-    console.log(`✅ User registered: ${user.email} (${user.role})`);
+    const passwordHash = await hashPassword(password);
+
+    const user = await prisma.user.create({
+      data: {
+        email: normEmail,
+        password: passwordHash,
+        name: name || normEmail.split("@")[0],
+        role: "ADMIN",
+      },
+      select: { id: true, email: true, name: true, role: true },
+    });
+
+    const token = signToken({ id: user.id, email: user.email, role: user.role });
+
+    console.log(`✅ Admin account created: ${user.email}`);
 
     res.status(201).json({
       success: true,
-      message: "User created successfully",
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role
-      }
+      message: "Admin account created successfully",
+      token,
+      user,
     });
   } catch (error) {
     console.error("Registration error:", error);
@@ -577,9 +467,9 @@ app.post("/api/auth/register", async (req: Request, res: Response): Promise<void
   }
 });
 
-// ── Logout endpoint ─────────────────────────────────────────────────────────
+// ── Logout ────────────────────────────────────────────────────────────────────
 app.post("/api/auth/logout", async (_req: Request, res: Response): Promise<void> => {
-  // Client side will remove the token
+  // Stateless JWT — client just discards the token.
   res.json({ success: true });
 });
 
@@ -633,7 +523,6 @@ app.get("/api/image-proxy", proxyLimiter, async (req: Request, res: Response): P
           proxyRes.statusCode < 400 &&
           proxyRes.headers.location
         ) {
-          // Handle redirect
           const location = proxyRes.headers.location;
           const redirectUrl = location.startsWith('http') ? location : `${parsed.origin}${location}`;
           res.redirect(`/api/image-proxy?url=${encodeURIComponent(redirectUrl)}`);
@@ -700,15 +589,15 @@ app.post("/api/upload", requireAdmin, adminLimiter, upload.array('media', 10), a
       filename: file.filename,
     }));
 
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       files: fileUrls,
-      count: files.length 
+      count: files.length
     });
   } catch (err) {
     console.error("[upload] Error:", err);
-    res.status(500).json({ 
-      error: err instanceof Error ? err.message : "Upload failed" 
+    res.status(500).json({
+      error: err instanceof Error ? err.message : "Upload failed"
     });
   }
 });
@@ -718,7 +607,7 @@ app.get("/api/projects", async (req: Request, res: Response): Promise<void> => {
   try {
     const { category } = req.query;
     const where = category ? { category: mapToPrismaCategory(category as string) } : undefined;
-    
+
     const projects = await prisma.project.findMany({
       where,
       include: {
@@ -731,12 +620,12 @@ app.get("/api/projects", async (req: Request, res: Response): Promise<void> => {
       },
       orderBy: { displayOrder: "asc" },
     });
-    
+
     res.json(projects);
   } catch (err) {
     console.error("GET /api/projects error:", err);
-    res.status(500).json({ 
-      error: err instanceof Error ? err.message : "Unknown error" 
+    res.status(500).json({
+      error: err instanceof Error ? err.message : "Unknown error"
     });
   }
 });
@@ -754,17 +643,17 @@ app.get("/api/projects/:id", async (req: Request, res: Response): Promise<void> 
         designMeta:   true,
       },
     });
-    
-    if (!project) { 
-      res.status(404).json({ error: "Project not found" }); 
-      return; 
+
+    if (!project) {
+      res.status(404).json({ error: "Project not found" });
+      return;
     }
-    
+
     res.json(project);
   } catch (err) {
     console.error("GET /api/projects/:id error:", err);
-    res.status(500).json({ 
-      error: err instanceof Error ? err.message : "Unknown error" 
+    res.status(500).json({
+      error: err instanceof Error ? err.message : "Unknown error"
     });
   }
 });
@@ -775,19 +664,19 @@ app.post("/api/projects", requireAdmin, adminLimiter, async (req: AuthenticatedR
     const body = req.body;
     const { title, category, description, tags, displayOrder, featured, images = [], links = [], videos = [], softwareMeta, artMeta, designMeta } = body;
 
-    if (!title || !category) { 
-      res.status(400).json({ error: "Title and category are required" }); 
-      return; 
+    if (!title || !category) {
+      res.status(400).json({ error: "Title and category are required" });
+      return;
     }
 
     let prismaCategory: PrismaCategory;
-    try { 
-      prismaCategory = mapToPrismaCategory(category as unknown as string); 
-    } catch (e) { 
-      res.status(400).json({ 
-        error: e instanceof Error ? e.message : "Invalid category" 
-      }); 
-      return; 
+    try {
+      prismaCategory = mapToPrismaCategory(category as unknown as string);
+    } catch (e) {
+      res.status(400).json({
+        error: e instanceof Error ? e.message : "Invalid category"
+      });
+      return;
     }
 
     const categoryStr = normalizeCategoryLabel(category as unknown as string);
@@ -799,20 +688,20 @@ app.post("/api/projects", requireAdmin, adminLimiter, async (req: AuthenticatedR
       tags:         tags         ?? [],
       displayOrder: displayOrder ?? 0,
       featured:     featured     ?? false,
-      images: { 
-        create: images.map((img: any, i: number) => ({ 
-          imageUrl: img.imageUrl, 
-          altText: img.altText ?? "", 
-          displayOrder: i 
-        })) 
+      images: {
+        create: images.map((img: any, i: number) => ({
+          imageUrl: img.imageUrl,
+          altText: img.altText ?? "",
+          displayOrder: i
+        }))
       },
-      links: { 
-        create: (links as IncomingLink[]).map((l, i) => ({ 
-          label: l.label, 
-          url: l.url, 
-          linkType: resolveLinkType(l), 
-          displayOrder: i 
-        })) 
+      links: {
+        create: (links as IncomingLink[]).map((l, i) => ({
+          label: l.label,
+          url: l.url,
+          linkType: resolveLinkType(l),
+          displayOrder: i
+        }))
       },
       videos: videos && videos.length > 0 ? {
         create: videos.map((v: any, i: number) => ({
@@ -845,12 +734,12 @@ app.post("/api/projects", requireAdmin, adminLimiter, async (req: AuthenticatedR
         designMeta: true
       },
     });
-    
+
     res.status(201).json(project);
   } catch (err) {
     console.error("Error creating project:", err);
-    res.status(500).json({ 
-      error: err instanceof Error ? err.message : "Unknown error" 
+    res.status(500).json({
+      error: err instanceof Error ? err.message : "Unknown error"
     });
   }
 });
@@ -862,24 +751,23 @@ app.put("/api/projects/:id", requireAdmin, adminLimiter, async (req: Authenticat
     const { title, category, description, tags, displayOrder, featured, images = [], links = [], videos = [], softwareMeta, artMeta, designMeta } = body;
 
     const existing = await prisma.project.findUnique({ where: { id } });
-    if (!existing) { 
-      res.status(404).json({ error: "Project not found" }); 
-      return; 
+    if (!existing) {
+      res.status(404).json({ error: "Project not found" });
+      return;
     }
 
     let prismaCategory: PrismaCategory;
-    try { 
-      prismaCategory = mapToPrismaCategory(category as unknown as string); 
-    } catch (e) { 
-      res.status(400).json({ 
-        error: e instanceof Error ? e.message : "Invalid category" 
-      }); 
-      return; 
+    try {
+      prismaCategory = mapToPrismaCategory(category as unknown as string);
+    } catch (e) {
+      res.status(400).json({
+        error: e instanceof Error ? e.message : "Invalid category"
+      });
+      return;
     }
 
     const categoryStr = normalizeCategoryLabel(category as unknown as string);
 
-    // Delete existing relations
     await prisma.$transaction([
       prisma.projectImage.deleteMany({ where: { projectId: id } }),
       prisma.projectLink.deleteMany({ where: { projectId: id } }),
@@ -893,20 +781,20 @@ app.put("/api/projects/:id", requireAdmin, adminLimiter, async (req: Authenticat
       tags:         tags         ?? [],
       displayOrder: displayOrder ?? 0,
       featured:     featured     ?? false,
-      images: { 
-        create: images.map((img: any, i: number) => ({ 
-          imageUrl: img.imageUrl, 
-          altText: img.altText ?? "", 
-          displayOrder: i 
-        })) 
+      images: {
+        create: images.map((img: any, i: number) => ({
+          imageUrl: img.imageUrl,
+          altText: img.altText ?? "",
+          displayOrder: i
+        }))
       },
-      links: { 
-        create: (links as IncomingLink[]).map((l, i) => ({ 
-          label: l.label, 
-          url: l.url, 
-          linkType: resolveLinkType(l), 
-          displayOrder: i 
-        })) 
+      links: {
+        create: (links as IncomingLink[]).map((l, i) => ({
+          label: l.label,
+          url: l.url,
+          linkType: resolveLinkType(l),
+          displayOrder: i
+        }))
       },
       videos: videos && videos.length > 0 ? {
         create: videos.map((v: any, i: number) => ({
@@ -945,12 +833,12 @@ app.put("/api/projects/:id", requireAdmin, adminLimiter, async (req: Authenticat
         designMeta: true
       },
     });
-    
+
     res.json(project);
   } catch (err) {
     console.error("Error updating project:", err);
-    res.status(500).json({ 
-      error: err instanceof Error ? err.message : "Unknown error" 
+    res.status(500).json({
+      error: err instanceof Error ? err.message : "Unknown error"
     });
   }
 });
@@ -959,17 +847,17 @@ app.delete("/api/projects/:id", requireAdmin, adminLimiter, async (req: Authenti
   try {
     const id = req.params.id;
     const existing = await prisma.project.findUnique({ where: { id } });
-    if (!existing) { 
-      res.status(404).json({ error: "Project not found" }); 
-      return; 
+    if (!existing) {
+      res.status(404).json({ error: "Project not found" });
+      return;
     }
-    
+
     await prisma.project.delete({ where: { id } });
     res.json({ success: true, message: "Project deleted successfully" });
   } catch (err) {
     console.error("Error deleting project:", err);
-    res.status(500).json({ 
-      error: err instanceof Error ? err.message : "Unknown error" 
+    res.status(500).json({
+      error: err instanceof Error ? err.message : "Unknown error"
     });
   }
 });
@@ -981,7 +869,7 @@ app.use((_req, res) => {
 
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   console.error("Unhandled error:", err);
-  res.status(500).json({ 
+  res.status(500).json({
     error: "Internal server error",
     message: process.env.NODE_ENV === 'development' ? err.message : undefined
   });
@@ -991,7 +879,7 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
 async function startServer() {
   console.log('🚀 Starting server...');
   console.log('📡 Testing database connection...');
-  
+
   const connected = await testDatabaseConnection();
   if (!connected) {
     console.error('❌ Failed to connect to database. Exiting...');

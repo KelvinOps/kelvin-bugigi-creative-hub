@@ -1,13 +1,47 @@
 // components/Admin/ProjectManager.tsx
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Plus, Edit, Trash2, Save, X, Image, Link as LinkIcon, 
+import {
+  Plus, Edit, Trash2, Save, X, Image, Link as LinkIcon,
   Video, Code, Palette, PenTool, Camera, Star, Upload,
   ChevronDown, ChevronUp, Loader2, AlertCircle, Globe,
   ExternalLink, Github, ShoppingCart, Eye
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+
+// ── Meta shapes ──────────────────────────────────────────────────────────────
+// Every field is optional. The form builds these up incrementally via partial
+// spreads (`{ ...prev.softwareMeta, liveUrl: x }`), which does not type-check
+// against required fields — that's what broke `npm run build` even when `vite`
+// dev was happy (esbuild strips types, it never checks them).
+interface SoftwareMeta {
+  techStack?: string[];
+  liveUrl?: string;
+  repoUrl?: string;
+  lighthouseScore?: number;
+  pageLoadMs?: number;
+  monthlyVisitors?: number;
+  uptime?: number;
+  analyticsNote?: string;
+}
+interface ArtMeta {
+  medium?: string;
+  dimensions?: string;
+  year?: number;
+  isAvailable?: boolean;
+  price?: number;
+  shopUrl?: string;
+}
+interface DesignMeta {
+  software?: string[];
+  clientName?: string;
+  year?: number;
+  behanceUrl?: string;
+}
+
+interface ProjectImage { imageUrl: string; altText?: string; displayOrder: number }
+interface ProjectLink  { label: string; url: string; linkType: string; displayOrder: number }
+interface ProjectVideo { videoUrl: string; title: string; description: string; displayOrder: number }
 
 interface Project {
   id: string;
@@ -16,61 +50,20 @@ interface Project {
   description: string;
   tags: string[];
   featured: boolean;
-  images: { imageUrl: string; altText?: string; displayOrder: number }[];
-  links: { label: string; url: string; linkType: string; displayOrder: number }[];
-  videos: { videoUrl: string; title: string; description: string; displayOrder: number }[];
-  softwareMeta?: {
-    techStack: string[];
-    liveUrl: string;
-    repoUrl: string;
-    lighthouseScore: number;
-    pageLoadMs: number;
-    monthlyVisitors: number;
-    uptime: number;
-    analyticsNote: string;
-  };
-  artMeta?: {
-    medium: string;
-    dimensions: string;
-    year: number;
-    isAvailable: boolean;
-    price: number;
-    shopUrl: string;
-  };
-  designMeta?: {
-    software: string[];
-    clientName: string;
-    year: number;
-    behanceUrl: string;
-  };
+  images: ProjectImage[];
+  links: ProjectLink[];
+  videos: ProjectVideo[];
+  softwareMeta?: SoftwareMeta;
+  artMeta?: ArtMeta;
+  designMeta?: DesignMeta;
 }
 
-// ── API base resolution ──────────────────────────────────────────────────────
-// Normalized so it NEVER includes a trailing /api, regardless of whether
-// VITE_API_URL was set with or without it. Matches Portfolio.tsx's convention
-// — every fetch below appends /api/... explicitly.
-//
-// IMPORTANT: VITE_* env vars are baked into the bundle at BUILD time, not
-// runtime. If VITE_API_URL isn't set in your hosting provider's build
-// environment, this will silently fall back to localhost:3001 in production
-// and every request will fail. The check below surfaces that loudly instead
-// of failing silently.
-const RAW_API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-const API_BASE = RAW_API_BASE.replace(/\/$/, '').replace(/\/api$/, '');
-
-if (typeof window !== 'undefined') {
-  const isLocalHost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
-  const apiIsLocalhost = /^(https?:\/\/)?(localhost|127\.0\.0\.1)/i.test(API_BASE);
-  if (!isLocalHost && apiIsLocalhost) {
-    // eslint-disable-next-line no-console
-    console.error(
-      `[ProjectManager] VITE_API_URL is not set for this deployment — API_BASE ` +
-      `resolved to "${API_BASE}", which is unreachable from a production browser. ` +
-      `Set VITE_API_URL in your hosting provider's build/environment settings to ` +
-      `your deployed backend's public URL (no trailing /api) and redeploy.`
-    );
-  }
-}
+// ── API paths ────────────────────────────────────────────────────────────────
+// Relative, same-origin, exactly like Portfolio.tsx. In dev, vite.config.ts
+// proxies /api → http://localhost:3001. In production, vercel.json rewrites
+// /api/* to the deployed backend. No VITE_API_URL, so there is no way for a
+// production build to silently ship a `localhost:3001` base URL and 404.
+const API = '/api';
 
 const categories = ['WEB_DEV', 'DESIGN', 'FINE_ART', 'PHOTOGRAPHY'];
 const categoryLabels = {
@@ -85,12 +78,15 @@ const categoryIcons = {
   FINE_ART: PenTool,
   PHOTOGRAPHY: Camera
 };
-const categoryColors = {
-  WEB_DEV: 'amber',
-  DESIGN: 'cyan',
-  FINE_ART: 'rose',
-  PHOTOGRAPHY: 'violet'
+// Full class strings — Tailwind scans source statically, so `bg-${color}-500/10`
+// is never generated. These are kept whole so the styles actually ship.
+const categoryTheme = {
+  WEB_DEV:     { chipBg: 'bg-amber-500/10',  text: 'text-amber-400'  },
+  DESIGN:      { chipBg: 'bg-cyan-500/10',   text: 'text-cyan-400'   },
+  FINE_ART:    { chipBg: 'bg-rose-500/10',   text: 'text-rose-400'   },
+  PHOTOGRAPHY: { chipBg: 'bg-violet-500/10', text: 'text-violet-400' }
 };
+const FALLBACK_THEME = { chipBg: 'bg-secondary', text: 'text-muted-foreground' };
 
 const linkTypes = ['live', 'demo', 'repo', 'shop', 'other'];
 const linkIcons = {
@@ -141,12 +137,15 @@ export const ProjectManager: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch(`${API_BASE}/api/projects`);
+      const response = await fetch(`${API}/projects`);
       if (!response.ok) throw new Error(`Failed to fetch projects (HTTP ${response.status})`);
       const data = await response.json();
       // Transform snake_case to camelCase for display
-      const transformed = data.map((p: any) => ({
+      const transformed: Project[] = data.map((p: any) => ({
         ...p,
+        description: p.description || '',
+        tags: p.tags || [],
+        featured: p.featured || false,
         images: (p.images || []).map((img: any) => ({
           imageUrl: img.imageUrl || img.image_url,
           altText: img.altText || img.alt_text || '',
@@ -178,7 +177,9 @@ export const ProjectManager: React.FC = () => {
           medium: p.artMeta.medium || '',
           dimensions: p.artMeta.dimensions || '',
           year: p.artMeta.year || 0,
-          isAvailable: p.artMeta.isAvailable !== undefined ? p.artMeta.isAvailable : p.artMeta.is_available !== undefined ? p.artMeta.is_available : true,
+          isAvailable: p.artMeta.isAvailable !== undefined
+            ? p.artMeta.isAvailable
+            : p.artMeta.is_available !== undefined ? p.artMeta.is_available : true,
           price: p.artMeta.price || 0,
           shopUrl: p.artMeta.shopUrl || p.artMeta.shop_url || ''
         } : undefined,
@@ -199,7 +200,7 @@ export const ProjectManager: React.FC = () => {
     }
   };
 
-  // Transform camelCase to snake_case for API
+  // Shape the payload the API expects
   const transformForAPI = (data: Partial<Project>) => {
     const result: any = {
       title: data.title,
@@ -271,9 +272,8 @@ export const ProjectManager: React.FC = () => {
     setSaving(true);
     setError(null);
     setSuccess(null);
-    
+
     try {
-      // Validate required fields
       if (!formData.title?.trim()) {
         setError('Title is required');
         setSaving(false);
@@ -285,9 +285,9 @@ export const ProjectManager: React.FC = () => {
         return;
       }
 
-      const url = isCreating ? `${API_BASE}/api/projects` : `${API_BASE}/api/projects/${editingProject?.id}`;
+      const url = isCreating ? `${API}/projects` : `${API}/projects/${editingProject?.id}`;
       const method = isCreating ? 'POST' : 'PUT';
-      
+
       const submitData = transformForAPI(formData);
 
       const response = await fetch(url, {
@@ -297,7 +297,6 @@ export const ProjectManager: React.FC = () => {
       });
 
       if (response.status === 401) {
-        // Token expired or invalid
         await logout();
         setError('Session expired. Please log in again.');
         setSaving(false);
@@ -308,11 +307,11 @@ export const ProjectManager: React.FC = () => {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.error || `Failed to save project (HTTP ${response.status})`);
       }
-      
+
       await fetchProjects();
       setSuccess(isCreating ? 'Project created successfully!' : 'Project updated successfully!');
       resetForm();
-      
+
       setTimeout(() => setSuccess(null), 3000);
     } catch (error) {
       console.error('Error saving project:', error);
@@ -328,10 +327,10 @@ export const ProjectManager: React.FC = () => {
       return;
     }
     if (!confirm('Are you sure you want to delete this project?')) return;
-    
+
     try {
       setError(null);
-      const response = await fetch(`${API_BASE}/api/projects/${id}`, {
+      const response = await fetch(`${API}/projects/${id}`, {
         method: 'DELETE',
         headers: getAuthHeaders()
       });
@@ -341,7 +340,7 @@ export const ProjectManager: React.FC = () => {
         setError('Session expired. Please log in again.');
         return;
       }
-      
+
       if (!response.ok) throw new Error(`Failed to delete project (HTTP ${response.status})`);
       await fetchProjects();
       setSuccess('Project deleted successfully!');
@@ -358,19 +357,21 @@ export const ProjectManager: React.FC = () => {
       setError('You must be logged in to upload files');
       return;
     }
-    
+
     setUploading(true);
     setError(null);
     const uploadFormData = new FormData();
-    
+
     for (let i = 0; i < files.length; i++) {
       uploadFormData.append('media', files[i]);
     }
 
     try {
-      const response = await fetch(`${API_BASE}/api/upload`, {
+      const response = await fetch(`${API}/upload`, {
         method: 'POST',
         headers: {
+          // Do NOT set Content-Type here — the browser must add the multipart
+          // boundary itself, and setting it manually breaks multer parsing.
           'Authorization': `Bearer ${token}`
         },
         body: uploadFormData
@@ -387,31 +388,32 @@ export const ProjectManager: React.FC = () => {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.error || `Upload failed (HTTP ${response.status})`);
       }
-      
+
       const data = await response.json();
       const uploadedFiles = Array.isArray(data?.files) ? data.files : [];
       if (uploadedFiles.length === 0) {
         throw new Error('Upload succeeded but the server returned no files.');
       }
-      
-      // Add uploaded URLs to form data
+
+      // URLs returned by the API are stored as-is. Relative ones stay relative
+      // and resolve same-origin, which is what Portfolio.tsx expects.
       if (type === 'image') {
         setFormData(prev => ({
           ...prev,
-          images: [...(prev.images || []), ...uploadedFiles.map((f: any) => ({
-            imageUrl: f.url.startsWith('http') ? f.url : `${API_BASE}${f.url}`,
+          images: [...(prev.images || []), ...uploadedFiles.map((f: any, i: number) => ({
+            imageUrl: f.url,
             altText: (f.originalname || '').replace(/\.[^/.]+$/, ''),
-            displayOrder: (prev.images?.length || 0)
+            displayOrder: (prev.images?.length || 0) + i
           }))]
         }));
       } else {
         setFormData(prev => ({
           ...prev,
-          videos: [...(prev.videos || []), ...uploadedFiles.map((f: any) => ({
-            videoUrl: f.url.startsWith('http') ? f.url : `${API_BASE}${f.url}`,
+          videos: [...(prev.videos || []), ...uploadedFiles.map((f: any, i: number) => ({
+            videoUrl: f.url,
             title: (f.originalname || '').replace(/\.[^/.]+$/, ''),
             description: '',
-            displayOrder: (prev.videos?.length || 0)
+            displayOrder: (prev.videos?.length || 0) + i
           }))]
         }));
       }
@@ -446,11 +448,11 @@ export const ProjectManager: React.FC = () => {
   const addLink = () => {
     setFormData(prev => ({
       ...prev,
-      links: [...(prev.links || []), { 
-        label: '', 
-        url: '', 
-        linkType: 'other', 
-        displayOrder: prev.links?.length || 0 
+      links: [...(prev.links || []), {
+        label: '',
+        url: '',
+        linkType: 'other',
+        displayOrder: prev.links?.length || 0
       }]
     }));
   };
@@ -465,7 +467,7 @@ export const ProjectManager: React.FC = () => {
   const updateLink = (index: number, field: string, value: string) => {
     setFormData(prev => ({
       ...prev,
-      links: (prev.links || []).map((link, i) => 
+      links: (prev.links || []).map((link, i) =>
         i === index ? { ...link, [field]: value } : link
       )
     }));
@@ -505,9 +507,8 @@ export const ProjectManager: React.FC = () => {
     }));
   };
 
-  const getCategoryColor = (category: string) => {
-    return categoryColors[category as keyof typeof categoryColors] || 'gray';
-  };
+  const getTheme = (category: string) =>
+    categoryTheme[category as keyof typeof categoryTheme] || FALLBACK_THEME;
 
   const getStatusColor = (isAvailable?: boolean) => {
     if (isAvailable === undefined) return 'text-muted-foreground';
@@ -558,7 +559,7 @@ export const ProjectManager: React.FC = () => {
             </button>
           </motion.div>
         )}
-        
+
         {success && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
@@ -584,8 +585,8 @@ export const ProjectManager: React.FC = () => {
               <h3 className="font-display text-xl font-semibold text-foreground">
                 {isCreating ? 'Create New Project' : 'Edit Project'}
               </h3>
-              <button 
-                onClick={resetForm} 
+              <button
+                onClick={resetForm}
                 className="p-2 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
               >
                 <X size={20} />
@@ -644,8 +645,8 @@ export const ProjectManager: React.FC = () => {
                 {(formData.tags || []).map((tag, index) => (
                   <span key={index} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary font-mono text-xs">
                     {tag}
-                    <button 
-                      onClick={() => removeTag(index)} 
+                    <button
+                      onClick={() => removeTag(index)}
                       className="hover:text-destructive transition-colors"
                     >
                       <X size={12} />
@@ -659,6 +660,7 @@ export const ProjectManager: React.FC = () => {
                 className="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all font-body text-foreground"
                 onKeyDown={e => {
                   if (e.key === 'Enter') {
+                    e.preventDefault();
                     addTag((e.target as HTMLInputElement).value);
                     (e.target as HTMLInputElement).value = '';
                   }
@@ -672,7 +674,7 @@ export const ProjectManager: React.FC = () => {
                 Images
               </label>
               <div className="flex items-center gap-4">
-                <label className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-secondary text-foreground hover:bg-secondary/80 transition-colors cursor-pointer font-mono text-xs uppercase tracking-wider disabled:opacity-50">
+                <label className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-secondary text-foreground hover:bg-secondary/80 transition-colors cursor-pointer font-mono text-xs uppercase tracking-wider">
                   <Upload size={16} />
                   {uploading ? 'Uploading...' : 'Upload Images'}
                   <input
@@ -711,7 +713,7 @@ export const ProjectManager: React.FC = () => {
                 Videos
               </label>
               <div className="flex items-center gap-4">
-                <label className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-secondary text-foreground hover:bg-secondary/80 transition-colors cursor-pointer font-mono text-xs uppercase tracking-wider disabled:opacity-50">
+                <label className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-secondary text-foreground hover:bg-secondary/80 transition-colors cursor-pointer font-mono text-xs uppercase tracking-wider">
                   <Upload size={16} />
                   {uploading ? 'Uploading...' : 'Upload Videos'}
                   <input
@@ -777,8 +779,8 @@ export const ProjectManager: React.FC = () => {
                         <option key={type} value={type}>{type}</option>
                       ))}
                     </select>
-                    <button 
-                      onClick={() => removeLink(index)} 
+                    <button
+                      onClick={() => removeLink(index)}
                       className="p-2 text-destructive hover:text-destructive/80 hover:bg-destructive/10 rounded-lg transition-colors"
                     >
                       <Trash2 size={18} />
@@ -786,8 +788,8 @@ export const ProjectManager: React.FC = () => {
                   </div>
                 );
               })}
-              <button 
-                onClick={addLink} 
+              <button
+                onClick={addLink}
                 className="text-primary hover:text-primary/80 font-mono text-xs uppercase tracking-wider transition-colors"
               >
                 + Add Link
@@ -880,7 +882,7 @@ export const ProjectManager: React.FC = () => {
                       className="w-full px-4 py-2 bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all font-body text-foreground"
                     />
                   </div>
-                  <div className="col-span-2">
+                  <div className="md:col-span-2">
                     <label className="block text-sm text-foreground mb-1">Analytics Note</label>
                     <input
                       type="text"
@@ -966,7 +968,7 @@ export const ProjectManager: React.FC = () => {
                       className="w-full px-4 py-2 bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all font-body text-foreground"
                     />
                   </div>
-                  <div className="col-span-2 flex items-center gap-3">
+                  <div className="md:col-span-2 flex items-center gap-3">
                     <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
                       <input
                         type="checkbox"
@@ -1104,7 +1106,7 @@ export const ProjectManager: React.FC = () => {
           projects.map((project) => {
             const Icon = categoryIcons[project.category as keyof typeof categoryIcons] || Code;
             const isExpanded = expandedProject === project.id;
-            const color = getCategoryColor(project.category);
+            const theme = getTheme(project.category);
 
             return (
               <motion.div
@@ -1113,18 +1115,18 @@ export const ProjectManager: React.FC = () => {
                 animate={{ opacity: 1, y: 0 }}
                 className="bg-card/60 backdrop-blur-xl border border-border/60 rounded-2xl overflow-hidden"
               >
-                <div 
+                <div
                   className="p-5 flex items-center justify-between cursor-pointer hover:bg-secondary/20 transition-colors"
                   onClick={() => toggleExpand(project.id)}
                 >
                   <div className="flex items-center gap-4 min-w-0 flex-1">
-                    <div className={`w-11 h-11 rounded-xl bg-${color}-500/10 flex items-center justify-center flex-shrink-0`}>
-                      <Icon size={20} className={`text-${color}-400`} />
+                    <div className={`w-11 h-11 rounded-xl ${theme.chipBg} flex items-center justify-center flex-shrink-0`}>
+                      <Icon size={20} className={theme.text} />
                     </div>
                     <div className="min-w-0 flex-1">
                       <h3 className="font-display font-semibold text-foreground truncate">{project.title}</h3>
                       <div className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap">
-                        <span className={`text-${color}-400`}>{categoryLabels[project.category as keyof typeof categoryLabels]}</span>
+                        <span className={theme.text}>{categoryLabels[project.category as keyof typeof categoryLabels]}</span>
                         {project.featured && (
                           <span className="inline-flex items-center gap-1 text-amber-400">
                             <Star size={12} className="fill-current" /> Featured
@@ -1259,16 +1261,16 @@ export const ProjectManager: React.FC = () => {
                           <div className="p-3 bg-amber-500/5 border border-amber-500/20 rounded-lg">
                             <h4 className="text-sm font-medium text-amber-400 mb-1">Tech Details</h4>
                             <div className="flex flex-wrap gap-2 text-sm">
-                              {project.softwareMeta.techStack.length > 0 && (
-                                <span>Stack: {project.softwareMeta.techStack.join(', ')}</span>
+                              {(project.softwareMeta.techStack || []).length > 0 && (
+                                <span>Stack: {(project.softwareMeta.techStack || []).join(', ')}</span>
                               )}
-                              {project.softwareMeta.lighthouseScore && (
+                              {!!project.softwareMeta.lighthouseScore && (
                                 <span className="text-amber-300">LH: {project.softwareMeta.lighthouseScore}</span>
                               )}
-                              {project.softwareMeta.pageLoadMs && (
+                              {!!project.softwareMeta.pageLoadMs && (
                                 <span className="text-amber-300">Load: {project.softwareMeta.pageLoadMs}ms</span>
                               )}
-                              {project.softwareMeta.monthlyVisitors && (
+                              {!!project.softwareMeta.monthlyVisitors && (
                                 <span className="text-amber-300">{project.softwareMeta.monthlyVisitors.toLocaleString()}/mo</span>
                               )}
                             </div>
@@ -1284,8 +1286,8 @@ export const ProjectManager: React.FC = () => {
                             <div className="flex flex-wrap gap-2 text-sm">
                               {project.artMeta.medium && <span>Medium: {project.artMeta.medium}</span>}
                               {project.artMeta.dimensions && <span>Size: {project.artMeta.dimensions}</span>}
-                              {project.artMeta.year && <span>Year: {project.artMeta.year}</span>}
-                              {project.artMeta.price && (
+                              {!!project.artMeta.year && <span>Year: {project.artMeta.year}</span>}
+                              {!!project.artMeta.price && (
                                 <span className="text-rose-300 font-medium">${project.artMeta.price}</span>
                               )}
                               {project.artMeta.isAvailable !== undefined && (
@@ -1297,19 +1299,19 @@ export const ProjectManager: React.FC = () => {
                           </div>
                         )}
 
-                        {(project.designMeta) && (
+                        {project.designMeta && (
                           <div className="p-3 bg-cyan-500/5 border border-cyan-500/20 rounded-lg">
                             <h4 className="text-sm font-medium text-cyan-400 mb-1">
                               {project.category === 'DESIGN' ? 'Design Details' : 'Photography Details'}
                             </h4>
                             <div className="flex flex-wrap gap-2 text-sm">
-                              {project.designMeta.software.length > 0 && (
-                                <span>Tools: {project.designMeta.software.join(', ')}</span>
+                              {(project.designMeta.software || []).length > 0 && (
+                                <span>Tools: {(project.designMeta.software || []).join(', ')}</span>
                               )}
                               {project.designMeta.clientName && (
                                 <span>Client: {project.designMeta.clientName}</span>
                               )}
-                              {project.designMeta.year && <span>Year: {project.designMeta.year}</span>}
+                              {!!project.designMeta.year && <span>Year: {project.designMeta.year}</span>}
                             </div>
                           </div>
                         )}
