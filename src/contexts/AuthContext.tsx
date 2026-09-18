@@ -22,7 +22,9 @@ export interface AuthContextType {
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
+import { API_BASE } from "@/lib/apiClient";
+
+const API_URL = API_BASE;
 
 // Case-insensitive, and tolerant of a role stored as e.g. "Admin" / "admin"
 const computeIsAdmin = (userData: User | null): boolean =>
