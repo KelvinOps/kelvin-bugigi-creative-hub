@@ -161,6 +161,14 @@ Deno.serve(async (req) => {
 
       if (action === "logout") return json({ success: true });
 
+      // Lets the signed-in administrator close their own account.
+      if (action === "account" && req.method === "DELETE") {
+        const admin = await requireAdmin(req);
+        if (!admin) return json({ error: "Unauthorized" }, 401);
+        await sql`DELETE FROM portfolio.admin_users WHERE id = ${admin.sub}`;
+        return json({ success: true });
+      }
+
       if (action === "verify" && req.method === "GET") {
         const header = req.headers.get("Authorization") ?? "";
         const payload = header.startsWith("Bearer ") ? await verifyToken(header.slice(7)) : null;
