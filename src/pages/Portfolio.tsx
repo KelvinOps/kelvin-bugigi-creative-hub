@@ -8,6 +8,7 @@ import {
   PenTool, Palette, Code, Star, Loader2, Camera
 } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
+import { API_BASE } from "@/lib/apiClient";
 
 // ── Image source resolver ─────────────────────────────────────────────────
 // Uploaded images are served straight from the database by the serverless
