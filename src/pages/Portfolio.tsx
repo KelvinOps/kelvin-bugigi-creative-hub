@@ -245,11 +245,9 @@ const EmptyState = ({ active }: { active: string }) => (
 );
 
 // ── API project fetcher ──────────────────────────────────────────────────
-// Relative path only. Same-origin in the browser at all times — dev server
-// proxies it (see vite.config.ts), production Vercel rewrites it
-// (see vercel.json). No env var, no hardcoded host, no CORS.
+// Reads from the serverless API, which queries the Neon database directly.
 async function fetchAllProjectsFromAPI(): Promise<Project[]> {
-  const response = await fetch("/api/projects");
+  const response = await fetch(`${API_BASE}/projects`);
   if (!response.ok) {
     throw new Error(`HTTP error! status: ${response.status}`);
   }
