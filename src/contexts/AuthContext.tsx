@@ -22,7 +22,9 @@ export interface AuthContextType {
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
+import { API_BASE } from "@/lib/apiClient";
+
+const API_URL = API_BASE;
 
 // Case-insensitive, and tolerant of a role stored as e.g. "Admin" / "admin"
 const computeIsAdmin = (userData: User | null): boolean =>
@@ -83,7 +85,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const normalizedEmail = email.trim().toLowerCase();
 
-      const response = await fetch(`${API_URL}/api/auth/register`, {
+      const response = await fetch(`${API_URL}/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -115,7 +117,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const normalizedEmail = email.trim().toLowerCase();
 
-      const response = await fetch(`${API_URL}/api/auth/login`, {
+      const response = await fetch(`${API_URL}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: normalizedEmail, password }),
@@ -147,7 +149,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     try {
       if (token) {
-        await fetch(`${API_URL}/api/auth/logout`, {
+        await fetch(`${API_URL}/auth/logout`, {
           method: "POST",
           headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         });

@@ -1,4 +1,5 @@
 // components/Admin/ProjectManager.tsx
+import { API_BASE } from '@/lib/apiClient';
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -63,7 +64,7 @@ interface Project {
 // proxies /api → http://localhost:3001. In production, vercel.json rewrites
 // /api/* to the deployed backend. No VITE_API_URL, so there is no way for a
 // production build to silently ship a `localhost:3001` base URL and 404.
-const API = '/api';
+const API = API_BASE;
 
 const categories = ['WEB_DEV', 'DESIGN', 'FINE_ART', 'PHOTOGRAPHY'];
 const categoryLabels = {

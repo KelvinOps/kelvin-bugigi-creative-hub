@@ -8,19 +8,14 @@ import {
   PenTool, Palette, Code, Star, Loader2, Camera
 } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
+import { API_BASE } from "@/lib/apiClient";
 
 // ── Image source resolver ─────────────────────────────────────────────────
-// All requests are same-origin relative paths now — no base URL to resolve,
-// no CORS, no env var. Vercel's rewrite (see vercel.json) forwards /api/*
-// to the real backend transparently.
+// Uploaded images are served straight from the database by the serverless
+// API, so URLs are already usable as-is. External URLs are used directly.
 function resolveImageSrc(src: string): string {
   if (!src || !src.trim()) return "";
-  const trimmed = src.trim();
-  if (trimmed.startsWith("data:") || trimmed.startsWith("blob:")) return trimmed;
-  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
-    return `/api/image-proxy?url=${encodeURIComponent(trimmed)}`;
-  }
-  return trimmed;
+  return src.trim();
 }
 
 function isDataUrl(src: string): boolean {
@@ -251,11 +246,9 @@ const EmptyState = ({ active }: { active: string }) => (
 );
 
 // ── API project fetcher ──────────────────────────────────────────────────
-// Relative path only. Same-origin in the browser at all times — dev server
-// proxies it (see vite.config.ts), production Vercel rewrites it
-// (see vercel.json). No env var, no hardcoded host, no CORS.
+// Reads from the serverless API, which queries the Neon database directly.
 async function fetchAllProjectsFromAPI(): Promise<Project[]> {
-  const response = await fetch("/api/projects");
+  const response = await fetch(`${API_BASE}/projects`);
   if (!response.ok) {
     throw new Error(`HTTP error! status: ${response.status}`);
   }
