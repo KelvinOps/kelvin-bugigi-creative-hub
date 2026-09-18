@@ -225,7 +225,7 @@ Deno.serve(async (req) => {
           VALUES (${file.name}, ${file.type}, ${file.size}, ${bytes})
           RETURNING id`;
         files.push({
-          url: `${url.origin}/functions/v1/api/media/${row.id}`,
+          url: `https://${url.host}/functions/v1/api/media/${row.id}`,
           name: file.name,
           type: file.type,
           size: file.size,
