@@ -10,17 +10,11 @@ import {
 import PageHeader from "@/components/PageHeader";
 
 // ── Image source resolver ─────────────────────────────────────────────────
-// All requests are same-origin relative paths now — no base URL to resolve,
-// no CORS, no env var. Vercel's rewrite (see vercel.json) forwards /api/*
-// to the real backend transparently.
+// Uploaded images are served straight from the database by the serverless
+// API, so URLs are already usable as-is. External URLs are used directly.
 function resolveImageSrc(src: string): string {
   if (!src || !src.trim()) return "";
-  const trimmed = src.trim();
-  if (trimmed.startsWith("data:") || trimmed.startsWith("blob:")) return trimmed;
-  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
-    return `/api/image-proxy?url=${encodeURIComponent(trimmed)}`;
-  }
-  return trimmed;
+  return src.trim();
 }
 
 function isDataUrl(src: string): boolean {
