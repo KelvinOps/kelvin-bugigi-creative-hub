@@ -22,7 +22,7 @@ export interface AuthContextType {
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-import { API_BASE } from "@/lib/apiClient";
+import { API_BASE, safeJson } from "@/lib/apiClient";
 
 const API_URL = API_BASE;
 
@@ -95,7 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }),
       });
 
-      const data = await response.json();
+      const data = (await safeJson<any>(response)) ?? {};
 
       if (!response.ok) return { success: false, error: data.error || "Registration failed" };
       return { success: true };
@@ -123,10 +123,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify({ email: normalizedEmail, password }),
       });
 
-      const data = await response.json();
+      const data = (await safeJson<any>(response)) ?? {};
 
       if (!response.ok) return { success: false, error: data.error || "Login failed" };
-      if (!data.token || !data.user) return { success: false, error: "Invalid response from server" };
+      if (!data.token || !data.user)
+        return { success: false, error: "Could not reach the sign-in service. Please try again." };
 
       // Persist first...
       localStorage.setItem("auth_token", data.token);
