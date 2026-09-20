@@ -17,7 +17,7 @@ export const PageHeader = ({ section, sectionNumber, title, subtitle }: PageHead
   const opacity = useTransform(scrollYProgress, [0, 0.8], [1, 0]);
 
   return (
-    <section ref={ref} className="relative pt-36 pb-24 overflow-hidden">
+    <section ref={ref} className="relative pt-28 sm:pt-32 pb-12 sm:pb-16 overflow-hidden border-b border-border/40">
       {/* Animated grid */}
       <motion.div
         className="absolute inset-0 pointer-events-none"
@@ -43,7 +43,7 @@ export const PageHeader = ({ section, sectionNumber, title, subtitle }: PageHead
 
       {/* Floating orbs */}
       <motion.div
-        className="absolute top-12 left-6 w-80 h-80 rounded-full pointer-events-none"
+        className="absolute top-12 left-6 w-64 h-64 rounded-full pointer-events-none"
         style={{
           background: "radial-gradient(circle, hsl(38 95% 58% / 0.08), transparent 70%)",
           filter: "blur(50px)",
@@ -52,7 +52,7 @@ export const PageHeader = ({ section, sectionNumber, title, subtitle }: PageHead
         transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
       />
       <motion.div
-        className="absolute bottom-0 right-6 w-96 h-96 rounded-full pointer-events-none"
+        className="absolute bottom-0 right-6 w-72 h-72 rounded-full pointer-events-none"
         style={{
           background: "radial-gradient(circle, hsl(16 88% 60% / 0.06), transparent 70%)",
           filter: "blur(60px)",
@@ -67,7 +67,7 @@ export const PageHeader = ({ section, sectionNumber, title, subtitle }: PageHead
         aria-hidden="true"
       >
         <span
-          className="font-display font-black text-[180px] md:text-[240px] text-foreground/[0.018] select-none leading-none tracking-tight"
+          className="font-display font-black text-[120px] sm:text-[170px] md:text-[210px] text-foreground/[0.025] select-none leading-none tracking-tight"
         >
           {title.split(" ")[0].toUpperCase()}
         </span>
@@ -76,7 +76,7 @@ export const PageHeader = ({ section, sectionNumber, title, subtitle }: PageHead
       {/* Content */}
       <motion.div
         style={{ y, opacity }}
-        className="container mx-auto px-6 relative z-10"
+        className="container mx-auto px-5 sm:px-6 relative z-10"
       >
         <div className="text-center max-w-3xl mx-auto">
 
@@ -105,19 +105,19 @@ export const PageHeader = ({ section, sectionNumber, title, subtitle }: PageHead
             initial={{ scaleX: 0, opacity: 0 }}
             animate={{ scaleX: 1, opacity: 1 }}
             transition={{ duration: 0.8, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
-            className="w-16 h-0.5 mx-auto mt-3 mb-8 rounded-full origin-left"
+            className="w-12 h-px mx-auto mt-3 mb-5 rounded-full origin-left"
             style={{
               background: "linear-gradient(90deg, hsl(38,95%,58%), hsl(16,88%,60%))",
             }}
           />
 
           {/* Title — word-by-word reveal */}
-          <div className="overflow-hidden mb-5">
+          <div className="overflow-hidden mb-3">
             <motion.h1
               initial={{ y: "100%", opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ duration: 0.7, delay: 0.25, ease: [0.22, 1, 0.36, 1] }}
-              className="font-display font-bold text-4xl md:text-5xl text-foreground leading-tight"
+              className="font-display font-bold text-4xl md:text-5xl text-foreground leading-tight tracking-tight"
             >
               {title}
             </motion.h1>
@@ -128,7 +128,7 @@ export const PageHeader = ({ section, sectionNumber, title, subtitle }: PageHead
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.4 }}
-            className="text-muted-foreground font-body text-lg leading-relaxed"
+            className="text-muted-foreground font-body text-base sm:text-lg leading-relaxed max-w-2xl mx-auto"
           >
             {subtitle}
           </motion.p>
@@ -138,7 +138,7 @@ export const PageHeader = ({ section, sectionNumber, title, subtitle }: PageHead
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.6 }}
-            className="flex items-center justify-center gap-1.5 mt-8"
+            className="flex items-center justify-center gap-1.5 mt-5"
           >
             {[...Array(5)].map((_, i) => (
               <motion.div

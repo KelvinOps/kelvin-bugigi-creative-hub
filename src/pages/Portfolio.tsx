@@ -315,13 +315,13 @@ const Portfolio = () => {
         section="Portfolio" sectionNumber="03" title="Portfolio"
         subtitle="A curated selection of projects spanning web development, graphic design, and fine art."
       />
-      <section className="py-10">
+      <section className="py-10 sm:py-12">
         <div className="container mx-auto px-4">
           <div className="text-center mb-3">
             <span className="text-muted-foreground font-mono text-xs tracking-widest uppercase">Selected Work</span>
           </div>
 
-          <div className="flex justify-center gap-1.5 mb-8 flex-wrap">
+          <div className="flex justify-center gap-2 mb-7 flex-wrap">
             {filters.map(f => {
               const style = categoryStyles[f];
               const Icon  = style?.icon;
@@ -373,7 +373,7 @@ const Portfolio = () => {
                       key={project.id} layout
                       initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.3, delay: i * 0.05 }}
-                      className={`group relative rounded-2xl overflow-hidden bg-card border ${style.border} hover:border-opacity-80 transition-all col-span-12 ${getSpan(project, i)}`}
+                       className={`group relative rounded-lg overflow-hidden bg-card border ${style.border} hover:border-opacity-80 shadow-sm hover:shadow-lg transition-all col-span-12 ${getSpan(project, i)}`}
                     >
                       <div
                         className="aspect-[16/10] overflow-hidden cursor-pointer relative"

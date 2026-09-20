@@ -222,7 +222,7 @@ const Skills = () => {
       />
 
       {/* ── SKILL CARDS ── */}
-      <section className="py-16 relative">
+      <section className="py-12 sm:py-14 relative">
         <div
           className="absolute left-0 top-0 bottom-0 w-px opacity-20"
           style={{ background: "linear-gradient(to bottom, transparent, hsl(38 95% 58%), transparent)" }}
@@ -248,7 +248,7 @@ const Skills = () => {
       </section>
 
       {/* ── RADIAL CHART ── */}
-      <section className="py-16 bg-card/20 relative overflow-hidden" ref={sectionRef}>
+      <section className="py-12 sm:py-14 bg-card/20 relative overflow-hidden border-y border-border/30" ref={sectionRef}>
         <motion.div style={{ opacity }} className="container mx-auto px-6">
           <div className="text-center mb-10">
             <span className="text-muted-foreground font-mono text-[9px] tracking-widest uppercase">
@@ -328,7 +328,7 @@ const Skills = () => {
       </section>
 
       {/* ── TOOLS ── */}
-      <section className="py-16 relative">
+      <section className="py-12 sm:py-14 relative">
         <div className="container mx-auto px-6 text-center">
           <motion.div
             initial={{ opacity: 0, y: 16 }}

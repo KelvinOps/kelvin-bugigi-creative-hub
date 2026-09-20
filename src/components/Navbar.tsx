@@ -2,9 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Menu, X, LogIn, LogOut, Shield } from "lucide-react";
+import { Menu, X, LogIn, LogOut, Shield, Moon, Sun } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
+import { useTheme } from "next-themes";
+import { Button } from "@/components/ui/button";
 
 const navLinks = [
   { label: "Home",      path: "/" },
@@ -21,6 +23,7 @@ const Navbar = () => {
   const location  = useLocation();
   const navigate  = useNavigate();
   const { user, isAdmin, logout, loading } = useAuth(); // ← was "signOut", now "logout"
+  const { resolvedTheme, setTheme } = useTheme();
 
   useEffect(() => {
     const handler = () => setScrolled(window.scrollY > 60);
@@ -70,14 +73,7 @@ const Navbar = () => {
       initial={{ y: -80, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-      className="fixed top-0 left-0 right-0 z-50 transition-all duration-500"
-      style={scrolled ? {
-        background: "hsl(222 28% 9% / 0.88)",
-        backdropFilter: "blur(28px)",
-        WebkitBackdropFilter: "blur(28px)",
-        borderBottom: "1px solid hsl(38 95% 58% / 0.07)",
-        boxShadow: "0 8px 40px hsl(222 28% 4% / 0.5)",
-      } : {}}
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${scrolled ? "bg-background/90 backdrop-blur-2xl border-b border-border/60 shadow-lg" : ""}`}
     >
       {/* Scroll progress indicator */}
       <motion.div
@@ -92,7 +88,7 @@ const Navbar = () => {
         transition={{ duration: 0.3 }}
       />
 
-      <div className="container mx-auto px-6 py-4 flex items-center justify-between">
+      <div className="container mx-auto px-5 sm:px-6 py-3 flex items-center justify-between">
 
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2.5 group">
@@ -144,6 +140,16 @@ const Navbar = () => {
 
         {/* Desktop right controls */}
         <div className="hidden md:flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+            aria-label={`Switch to ${resolvedTheme === "dark" ? "light" : "dark"} theme`}
+            title={`Switch to ${resolvedTheme === "dark" ? "light" : "dark"} theme`}
+            className="h-9 w-9 rounded-full text-muted-foreground hover:text-foreground"
+          >
+            {resolvedTheme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
+          </Button>
           {renderAuthDesktop()}
           <Link
             to="/contact"
@@ -155,11 +161,12 @@ const Navbar = () => {
         </div>
 
         {/* Hamburger */}
-        <motion.button
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={() => setMobileOpen(!mobileOpen)}
-          className="md:hidden p-2 text-foreground relative z-50"
+          className="md:hidden text-foreground relative z-50"
           aria-label="Toggle menu"
-          whileTap={{ scale: 0.9 }}
         >
           <AnimatePresence mode="wait" initial={false}>
             {mobileOpen ? (
@@ -172,7 +179,7 @@ const Navbar = () => {
               </motion.div>
             )}
           </AnimatePresence>
-        </motion.button>
+        </Button>
       </div>
 
       {/* Mobile menu */}
@@ -184,7 +191,7 @@ const Navbar = () => {
             exit={{ opacity: 0, height: 0, y: -10 }}
             transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
             className="md:hidden fixed inset-0 top-0 z-40 flex flex-col"
-            style={{ background: "hsl(222 28% 7% / 0.97)", backdropFilter: "blur(30px)" }}
+            className="md:hidden fixed inset-0 top-0 z-40 flex flex-col bg-background/95 backdrop-blur-3xl"
           >
             {/* Background decoration */}
             <div className="absolute inset-0 pointer-events-none">
@@ -217,6 +224,14 @@ const Navbar = () => {
                 transition={{ delay: 0.5 }}
                 className="flex flex-col gap-3 mt-8 pt-8 border-t border-border/30"
               >
+                <Button
+                  variant="outline"
+                  onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+                  className="justify-start gap-2 rounded-full"
+                >
+                  {resolvedTheme === "dark" ? <Sun size={14} /> : <Moon size={14} />}
+                  {resolvedTheme === "dark" ? "Light theme" : "Dark theme"}
+                </Button>
                 {!loading && user && isAdmin && (
                   <Link to="/admin" className="flex items-center gap-2 font-mono text-sm uppercase text-amber-400">
                     <Shield size={14} /> Admin Dashboard

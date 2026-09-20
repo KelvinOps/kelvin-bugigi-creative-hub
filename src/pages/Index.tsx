@@ -416,7 +416,7 @@ const Index = () => {
       <NoiseOverlay />
 
       {/* ═══════════════════════════ HERO ═══════════════════════════ */}
-      <section ref={heroRef} className="relative min-h-screen flex items-center overflow-hidden">
+      <section ref={heroRef} className="relative min-h-[760px] lg:min-h-[820px] flex items-center overflow-hidden border-b border-border/30">
 
         {/* Animated grid */}
         <motion.div
@@ -453,7 +453,7 @@ const Index = () => {
 
         <motion.div
           style={{ y: springHeroY, opacity: heroOpacity }}
-          className="container mx-auto px-6 pt-24 pb-16 relative z-10"
+          className="container mx-auto px-5 sm:px-6 pt-24 pb-12 relative z-10"
         >
           <div className="grid lg:grid-cols-[1fr_auto] gap-12 items-center">
 
@@ -638,7 +638,7 @@ const Index = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 3.1 }}
-            className="absolute bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1.5"
+           className="hidden lg:flex absolute bottom-5 left-1/2 -translate-x-1/2 flex-col items-center gap-1.5"
           >
             <span className="text-muted-foreground font-mono text-[8px] tracking-[0.4em] uppercase">Scroll</span>
             <motion.div animate={{ y: [0, 6, 0] }} transition={{ duration: 1.5, repeat: Infinity }}>
@@ -662,7 +662,7 @@ const Index = () => {
       </div>
 
       {/* ═══════════════════════ ABOUT PREVIEW ════════════════════════ */}
-      <section className="py-20 relative overflow-hidden">
+      <section className="py-14 sm:py-16 relative overflow-hidden">
         <div
           className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[300px] pointer-events-none"
           style={{ background: "radial-gradient(ellipse, hsl(38 95% 58% / 0.04), transparent 70%)", filter: "blur(60px)" }}
@@ -717,7 +717,7 @@ const Index = () => {
       </section>
 
       {/* ═══════════════════════ DISCIPLINES ═══════════════════════════ */}
-      <section className="py-20 relative">
+      <section className="py-14 sm:py-16 relative border-y border-border/25 bg-card/10">
         {/* Vertical rule lines */}
         {[1 / 4, 3 / 4].map((pos, i) => (
           <div
@@ -754,7 +754,7 @@ const Index = () => {
       </section>
 
       {/* ══════════════════════ FEATURED WORK ══════════════════════════ */}
-      <section className="py-20 relative overflow-hidden">
+      <section className="py-14 sm:py-16 relative overflow-hidden">
         <div
           className="absolute bottom-0 right-0 w-[500px] h-[350px] pointer-events-none"
           style={{ background: "radial-gradient(ellipse at bottom right, hsl(16 88% 60% / 0.05), transparent 70%)", filter: "blur(80px)" }}
@@ -807,7 +807,7 @@ const Index = () => {
       </section>
 
       {/* ══════════════════════════ CTA ════════════════════════════════ */}
-      <section className="py-20 relative overflow-hidden">
+      <section className="py-14 sm:py-16 relative overflow-hidden border-t border-border/25">
         <div className="absolute inset-0">
           <div className="bg-gradient-amber-subtle absolute inset-0" />
           <motion.div
