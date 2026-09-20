@@ -217,7 +217,7 @@ const Contact = () => {
       />
 
       {/* ↓ py-24 → py-10, px-6 → px-4 */}
-      <section className="py-10 relative overflow-hidden">
+      <section className="py-10 sm:py-12 relative overflow-hidden">
         {/* Background glows */}
         <div
           className="absolute right-0 top-0 w-[500px] h-[500px] rounded-full pointer-events-none"
@@ -243,7 +243,7 @@ const Contact = () => {
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-              className="lg:col-span-2 space-y-4"
+              className="lg:col-span-2 space-y-4 lg:pr-4"
             >
               <div>
                 <span className="text-muted-foreground font-mono text-[10px] tracking-widest uppercase block mb-2">
@@ -333,10 +333,10 @@ const Contact = () => {
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.7, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
-              className="lg:col-span-3 relative"
+              className="lg:col-span-3 relative lg:border-l lg:border-border/60 lg:pl-6"
             >
               {/* ↓ p-7 → p-5 */}
-              <div className="p-5 rounded-2xl bg-card border border-border relative overflow-hidden">
+              <div className="p-5 sm:p-6 rounded-lg bg-card border border-border relative overflow-hidden shadow-sm">
                 {/* Subtle top gradient */}
                 <div
                   className="absolute top-0 left-0 right-0 h-0.5"

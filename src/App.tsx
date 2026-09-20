@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { useEffect } from "react";
+import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -64,18 +65,20 @@ const AppLayout = () => {
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <BrowserRouter>
-      <AuthProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <PageLoader />
-          <CustomCursor />
-          <NoiseOverlay />
-          <AppLayout />
-        </TooltipProvider>
-      </AuthProvider>
-    </BrowserRouter>
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+      <BrowserRouter>
+        <AuthProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <PageLoader />
+            <CustomCursor />
+            <NoiseOverlay />
+            <AppLayout />
+          </TooltipProvider>
+        </AuthProvider>
+      </BrowserRouter>
+    </ThemeProvider>
   </QueryClientProvider>
 );
 

@@ -168,7 +168,7 @@ const About = () => {
       />
 
       {/* ── INTRO SECTION ── */}
-      <section className="py-16 relative overflow-hidden">
+      <section className="py-12 sm:py-14 relative overflow-hidden">
         {/* Background orb */}
         <div
           className="absolute top-0 right-0 w-[500px] h-[500px] rounded-full pointer-events-none"
@@ -179,7 +179,7 @@ const About = () => {
         />
 
         <div className="container mx-auto px-6">
-          <div className="grid lg:grid-cols-2 gap-14 items-center">
+          <div className="grid lg:grid-cols-12 gap-9 lg:gap-12 items-center max-w-6xl mx-auto">
 
             {/* Portrait */}
             <motion.div
@@ -189,9 +189,9 @@ const About = () => {
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.75, ease: [0.22, 1, 0.36, 1] }}
-              className="relative"
+              className="relative lg:col-span-5"
             >
-              <div className="relative max-w-md mx-auto">
+              className="relative max-w-sm mx-auto">
                 {/* Glow blob */}
                 <motion.div
                   className="absolute -inset-6 rounded-full opacity-25"
@@ -241,6 +241,7 @@ const About = () => {
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.75, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+              className="lg:col-span-7 lg:border-l lg:border-border/60 lg:pl-10"
             >
               <span className="text-muted-foreground font-mono text-[9px] tracking-widest uppercase block mb-2">
                 Kelvin Bugigi
@@ -309,7 +310,7 @@ const About = () => {
       </section>
 
       {/* ── JOURNEY ── */}
-      <section className="py-16 bg-card/20 relative overflow-hidden">
+      <section className="py-12 sm:py-14 bg-card/20 relative overflow-hidden border-y border-border/30">
         {/* Ambient vertical lines */}
         <div className="absolute inset-0 pointer-events-none">
           {[20, 40, 60, 80].map((x) => (
@@ -331,7 +332,7 @@ const About = () => {
             initial={{ opacity: 0, y: 16 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="text-center mb-12"
+            className="text-center mb-8"
           >
             <span className="text-muted-foreground font-mono text-[9px] tracking-widest uppercase">
               My Journey
@@ -359,7 +360,7 @@ const About = () => {
       </section>
 
       {/* ── VALUES / PHILOSOPHY ── */}
-      <section className="py-16 relative">
+      <section className="py-12 sm:py-14 relative">
         <div className="container mx-auto px-6">
           <motion.div
             initial={{ opacity: 0, y: 16 }}

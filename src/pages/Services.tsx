@@ -198,7 +198,7 @@ const Services = () => {
       />
 
       {/* ── SERVICES GRID ── */}
-      <section className="py-10 relative">
+      <section className="py-10 sm:py-12 relative">
         {/* Animated grid bg */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-[0.02]">
           <motion.div
@@ -237,7 +237,7 @@ const Services = () => {
       </section>
 
       {/* ── PROCESS ── */}
-      <section className="py-10 bg-card/20 relative">
+      <section className="py-10 sm:py-12 bg-card/20 relative border-y border-border/30">
         <div className="container mx-auto px-4">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -305,7 +305,7 @@ const Services = () => {
       </section>
 
       {/* ── CTA ── */}
-      <section className="py-10 relative">
+      <section className="py-10 sm:py-12 relative">
         <div className="absolute inset-0 bg-gradient-amber-subtle" />
         <div className="container mx-auto px-4 relative z-10 text-center">
           <motion.div
