@@ -190,7 +190,6 @@ const Navbar = () => {
             animate={{ opacity: 1, height: "100dvh", y: 0 }}
             exit={{ opacity: 0, height: 0, y: -10 }}
             transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-            className="md:hidden fixed inset-0 top-0 z-40 flex flex-col"
             className="md:hidden fixed inset-0 top-0 z-40 flex flex-col bg-background/95 backdrop-blur-3xl"
           >
             {/* Background decoration */}
