@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, Code, Palette, Box, PenTool, Layout, GraduationCap, CheckCircle2, Zap } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
+import ProjectAdvisor from "@/components/ProjectAdvisor";
 
 const services = [
   {
@@ -237,6 +238,8 @@ const Services = () => {
       </section>
 
       {/* ── PROCESS ── */}
+      <ProjectAdvisor />
+
       <section className="py-10 sm:py-12 bg-card/20 relative border-y border-border/30">
         <div className="container mx-auto px-4">
           <motion.div
