@@ -191,7 +191,7 @@ const About = () => {
               transition={{ duration: 0.75, ease: [0.22, 1, 0.36, 1] }}
               className="relative lg:col-span-5"
             >
-              className="relative max-w-sm mx-auto">
+              <div className="relative max-w-sm mx-auto">
                 {/* Glow blob */}
                 <motion.div
                   className="absolute -inset-6 rounded-full opacity-25"
